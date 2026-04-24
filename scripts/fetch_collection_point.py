@@ -95,12 +95,12 @@ def fetch_point(
             if category_id == 19:
                 raw_path = raw_dir / "supermarkets_category_19.json"
                 processed_path = processed_dir / "supermarkets.jsonl"
-                rows = flatten_supermarkets_response(data, point_code, source_url)
+                rows = flatten_supermarkets_response(data, point_code, source_url, dst)
                 summary["supermarkets_found"] += len(rows)
             else:
                 raw_path = raw_dir / f"category_{category_id}.json"
                 processed_path = processed_dir / f"category_{category_id}_prices.jsonl"
-                rows = flatten_items_price_response(data, point_code, category_id, source_url)
+                rows = flatten_items_price_response(data, point_code, category_id, source_url, dst)
                 summary["products_found"] += count_products(data)
                 summary["price_records_found"] += len(rows)
 

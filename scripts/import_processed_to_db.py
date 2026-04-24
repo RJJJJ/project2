@@ -113,6 +113,18 @@ def execute_schema(conn: Any) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS point_supermarkets (
+            point_code TEXT NOT NULL REFERENCES collection_points(point_code),
+            supermarket_oid BIGINT NOT NULL REFERENCES supermarkets(supermarket_oid),
+            collection_date DATE NOT NULL,
+            source_url TEXT,
+            raw_payload JSONB,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            PRIMARY KEY (point_code, supermarket_oid, collection_date)
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS price_records (
             id BIGSERIAL PRIMARY KEY,
             product_oid BIGINT NOT NULL REFERENCES products(product_oid),
@@ -127,12 +139,41 @@ def execute_schema(conn: Any) -> None:
             raw_payload JSONB,
             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            UNIQUE (product_oid, supermarket_oid, point_code, collection_date)
+            CONSTRAINT price_records_uniq_product_market_point_cat_date
+                UNIQUE (product_oid, supermarket_oid, point_code, category_id, collection_date)
         )
         """,
         "CREATE INDEX IF NOT EXISTS idx_price_records_collection_date ON price_records(collection_date)",
         "CREATE INDEX IF NOT EXISTS idx_price_records_point_code ON price_records(point_code)",
         "CREATE INDEX IF NOT EXISTS idx_price_records_category_id ON price_records(category_id)",
+        """
+        DO $$
+        DECLARE
+            old_constraint_name TEXT;
+        BEGIN
+            SELECT conname INTO old_constraint_name
+            FROM pg_constraint
+            WHERE conrelid = 'price_records'::regclass
+              AND contype = 'u'
+              AND pg_get_constraintdef(oid) = 'UNIQUE (product_oid, supermarket_oid, point_code, collection_date)'
+            LIMIT 1;
+
+            IF old_constraint_name IS NOT NULL THEN
+                EXECUTE format('ALTER TABLE price_records DROP CONSTRAINT %I', old_constraint_name);
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname = 'price_records_uniq_product_market_point_cat_date'
+                  AND conrelid = 'price_records'::regclass
+            ) THEN
+                ALTER TABLE price_records
+                ADD CONSTRAINT price_records_uniq_product_market_point_cat_date
+                UNIQUE (product_oid, supermarket_oid, point_code, category_id, collection_date);
+            END IF;
+        END $$;
+        """,
     ]
     with conn.cursor() as cur:
         for statement in statements:
@@ -186,6 +227,43 @@ def upsert_supermarkets(conn: Any, rows: list[dict[str, Any]]) -> int:
                     supermarket_oid,
                     row.get("supermarket_id"),
                     row.get("supermarket_name"),
+                ),
+            )
+            count += 1
+    return count
+
+
+def upsert_point_supermarkets(conn: Any, rows: list[dict[str, Any]], collection_date: str) -> int:
+    count = 0
+    with conn.cursor() as cur:
+        for row in rows:
+            point_code = row.get("point_code")
+            supermarket_oid = row.get("supermarket_oid")
+            if not point_code or supermarket_oid is None:
+                continue
+            cur.execute(
+                """
+                INSERT INTO point_supermarkets (
+                    point_code,
+                    supermarket_oid,
+                    collection_date,
+                    source_url,
+                    raw_payload,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s::jsonb, now())
+                ON CONFLICT (point_code, supermarket_oid, collection_date)
+                DO UPDATE SET
+                    source_url = EXCLUDED.source_url,
+                    raw_payload = EXCLUDED.raw_payload,
+                    updated_at = now()
+                """,
+                (
+                    point_code,
+                    supermarket_oid,
+                    collection_date,
+                    row.get("source_url"),
+                    json.dumps(row.get("raw_payload"), ensure_ascii=False),
                 ),
             )
             count += 1
@@ -283,7 +361,7 @@ def upsert_price_records(
                     updated_at
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, now())
-                ON CONFLICT (product_oid, supermarket_oid, point_code, collection_date)
+                ON CONFLICT (product_oid, supermarket_oid, point_code, category_id, collection_date)
                 DO UPDATE SET
                     category_id = EXCLUDED.category_id,
                     price_mop = EXCLUDED.price_mop,
@@ -321,6 +399,7 @@ def import_point_dir(
 
     supermarket_rows = read_jsonl(point_dir / "supermarkets.jsonl")
     supermarket_count = upsert_supermarkets(conn, supermarket_rows)
+    point_supermarket_count = upsert_point_supermarkets(conn, supermarket_rows, collection_date)
 
     price_rows: list[dict[str, Any]] = []
     for path in sorted(point_dir.glob("category_*_prices.jsonl")):
@@ -334,6 +413,7 @@ def import_point_dir(
     return {
         "point_code": point_code,
         "supermarkets_upserted": supermarket_count,
+        "point_supermarkets_upserted": point_supermarket_count,
         "categories_upserted": category_count,
         "products_upserted": product_count,
         "price_records_upserted": price_record_count,
@@ -364,6 +444,7 @@ def main() -> int:
         "collection_date": collection_date,
         "points_processed": 0,
         "supermarkets_upserted": 0,
+        "point_supermarkets_upserted": 0,
         "categories_upserted": 0,
         "products_upserted": 0,
         "price_records_upserted": 0,
@@ -378,6 +459,7 @@ def main() -> int:
                 result = import_point_dir(conn, point_dir, collection_date, configured_points)
                 summary["points_processed"] += 1
                 summary["supermarkets_upserted"] += result["supermarkets_upserted"]
+                summary["point_supermarkets_upserted"] += result["point_supermarkets_upserted"]
                 summary["categories_upserted"] += result["categories_upserted"]
                 summary["products_upserted"] += result["products_upserted"]
                 summary["price_records_upserted"] += result["price_records_upserted"]

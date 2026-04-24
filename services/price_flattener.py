@@ -42,6 +42,7 @@ def flatten_supermarkets_response(
     data: dict[str, Any] | list[Any],
     point_code: str,
     source_url: str,
+    distance_m: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for supermarket in _list_from_data(data, "supermarkets"):
@@ -51,6 +52,7 @@ def flatten_supermarkets_response(
                 "supermarket_oid": supermarket.get("oid"),
                 "supermarket_id": supermarket.get("_id"),
                 "supermarket_name": supermarket.get("name"),
+                "distance_m": distance_m,
                 "source_url": source_url,
                 "raw_payload": supermarket,
             }
@@ -63,6 +65,7 @@ def flatten_items_price_response(
     point_code: str,
     category_id: int,
     source_url: str,
+    distance_m: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in _list_from_data(data, "itemsPrice"):
@@ -85,6 +88,7 @@ def flatten_items_price_response(
                     "price_mop": clean_price(supermarket.get("price")),
                     "discount": supermarket.get("discount"),
                     "flag": supermarket.get("flag"),
+                    "distance_m": distance_m,
                     "source_url": source_url,
                     "raw_payload": {
                         "item": item,
