@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
+import pytest
+
+fastapi = pytest.importorskip("fastapi")
+testclient = pytest.importorskip("fastapi.testclient")
+
+HTTPException = fastapi.HTTPException
+TestClient = testclient.TestClient
 
 import app.api as api
 from app.main import app
