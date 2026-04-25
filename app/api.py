@@ -8,8 +8,8 @@ from fastapi import APIRouter, HTTPException, Query
 from app.schemas import BasketAskRequest, BasketAskResponse, TextResponse
 from app.utils import (
     DEFAULT_POINT_CODE,
-    DEFAULT_PROCESSED_ROOT,
     ensure_processed_data_exists,
+    get_processed_root,
     latest_processed_date,
     resolve_date,
     resolve_point_from_request,
@@ -34,28 +34,33 @@ def _resolve_point_search(query: str) -> dict[str, Any]:
 
 
 def _basket_result(request: BasketAskRequest) -> tuple[dict[str, Any], dict[str, Any]]:
-    date = resolve_date(request.date)
+    processed_root = get_processed_root()
+    date = resolve_date(request.date, processed_root)
     point = resolve_point_from_request(request.point_code, request.point_name, request.district)
     point_code = str(point["point_code"])
-    ensure_processed_data_exists(date, point_code)
-    result = build_result(date, point_code, request.text, DEFAULT_PROCESSED_ROOT)
+    ensure_processed_data_exists(date, point_code, processed_root)
+    result = build_result(date, point_code, request.text, processed_root)
     return result, point
 
 
 def _signals_result(point_code: str, date: str, top_n: int) -> dict[str, Any]:
-    selected_date = resolve_date(date)
-    ensure_processed_data_exists(selected_date, point_code)
-    signals = deepcopy(analyze_point_signals(selected_date, point_code, DEFAULT_PROCESSED_ROOT))
+    processed_root = get_processed_root()
+    selected_date = resolve_date(date, processed_root)
+    ensure_processed_data_exists(selected_date, point_code, processed_root)
+    signals = deepcopy(analyze_point_signals(selected_date, point_code, processed_root))
     signals["largest_price_gap"] = (signals.get("largest_price_gap") or [])[:top_n]
     return signals
 
 
 @router.get("/health")
 def health() -> dict[str, Any]:
+    processed_root = get_processed_root()
     return {
         "status": "ok",
-        "latest_processed_date": latest_processed_date(),
+        "latest_processed_date": latest_processed_date(processed_root),
         "default_point_code": DEFAULT_POINT_CODE,
+        "processed_root": str(processed_root),
+        "processed_root_exists": processed_root.exists(),
     }
 
 
@@ -98,4 +103,3 @@ def get_signals_text(
 ) -> dict[str, str]:
     signals = _signals_result(point_code, date, top_n)
     return {"text": format_signals_text(signals, top_n=top_n)}
-

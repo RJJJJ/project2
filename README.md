@@ -76,6 +76,24 @@ http://127.0.0.1:8000
 VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```
 
+`frontend/.env.example` 也提供本地前端設定範本：
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+部署到 Vercel 時，請在 Vercel 專案環境變數設定：
+
+```text
+VITE_API_BASE_URL=https://your-render-backend.onrender.com
+```
+
+Render backend 若要允許 Vercel frontend 呼叫，請設定：
+
+```text
+ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+```
+
 ## 啟動 Telegram Bot
 
 先在 `.env` 填入：

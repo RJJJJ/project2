@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 fastapi = pytest.importorskip("fastapi")
@@ -46,7 +48,9 @@ def _sample_result() -> dict:
 
 
 def test_health(monkeypatch) -> None:
-    monkeypatch.setattr(api, "latest_processed_date", lambda: "2026-04-25")
+    processed_root = Path("demo_data/processed")
+    monkeypatch.setattr(api, "latest_processed_date", lambda processed_root=None: "2026-04-25")
+    monkeypatch.setattr(api, "get_processed_root", lambda: processed_root)
 
     response = client.get("/api/health")
 
@@ -55,6 +59,8 @@ def test_health(monkeypatch) -> None:
         "status": "ok",
         "latest_processed_date": "2026-04-25",
         "default_point_code": "p001",
+        "processed_root": str(processed_root),
+        "processed_root_exists": processed_root.exists(),
     }
 
 
@@ -68,9 +74,9 @@ def test_points(monkeypatch) -> None:
 
 
 def test_basket_ask(monkeypatch) -> None:
-    monkeypatch.setattr(api, "resolve_date", lambda date: "2026-04-25")
+    monkeypatch.setattr(api, "resolve_date", lambda date, processed_root=None: "2026-04-25")
     monkeypatch.setattr(api, "resolve_point_from_request", lambda *args, **kwargs: {"point_code": "p001", "name": "高士德"})
-    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code: None)
+    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code, processed_root=None: None)
     monkeypatch.setattr(api, "build_result", lambda *args, **kwargs: _sample_result())
 
     response = client.post(
@@ -84,9 +90,9 @@ def test_basket_ask(monkeypatch) -> None:
 
 
 def test_basket_ask_text(monkeypatch) -> None:
-    monkeypatch.setattr(api, "resolve_date", lambda date: "2026-04-25")
+    monkeypatch.setattr(api, "resolve_date", lambda date, processed_root=None: "2026-04-25")
     monkeypatch.setattr(api, "resolve_point_from_request", lambda *args, **kwargs: {"point_code": "p001", "name": "高士德"})
-    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code: None)
+    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code, processed_root=None: None)
     monkeypatch.setattr(api, "build_result", lambda *args, **kwargs: _sample_result())
 
     response = client.post(
@@ -99,8 +105,8 @@ def test_basket_ask_text(monkeypatch) -> None:
 
 
 def test_signals(monkeypatch) -> None:
-    monkeypatch.setattr(api, "resolve_date", lambda date: "2026-04-25")
-    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code: None)
+    monkeypatch.setattr(api, "resolve_date", lambda date, processed_root=None: "2026-04-25")
+    monkeypatch.setattr(api, "ensure_processed_data_exists", lambda date, point_code, processed_root=None: None)
     monkeypatch.setattr(
         api,
         "analyze_point_signals",

@@ -42,3 +42,30 @@ VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```text
 VITE_API_BASE_URL=https://your-backend.example.com
 ```
+
+## Backend on Render
+
+1. New Web Service
+2. Connect GitHub repo
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Environment variables:
+
+```text
+PROCESSED_ROOT=demo_data/processed
+ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+```
+
+`PROCESSED_ROOT` 也可以不填；若 `data/processed` 不存在或沒有資料，API 會 fallback 到 `demo_data/processed`。
+
+## Frontend on Vercel
+
+1. Import `frontend` directory
+2. Framework: Vite
+3. Build command: `npm run build`
+4. Output directory: `dist`
+5. Env:
+
+```text
+VITE_API_BASE_URL=https://your-backend-url
+```
