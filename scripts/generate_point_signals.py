@@ -20,7 +20,7 @@ def _money(value: float | int | None) -> str:
     return f"{float(value):.1f} MOP"
 
 
-def format_signals_text(signals: dict) -> str:
+def format_signals_text(signals: dict, top_n: int = 5) -> str:
     lines = [
         "本區抵買訊號",
         "",
@@ -30,7 +30,7 @@ def format_signals_text(signals: dict) -> str:
         "本區價差最大商品：",
     ]
 
-    gaps = signals.get("largest_price_gap") or []
+    gaps = (signals.get("largest_price_gap") or [])[:top_n]
     if gaps:
         for item in gaps:
             lines.extend(

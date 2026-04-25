@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,7 @@ from scripts.generate_point_signals import format_signals_text
 from services.basket_text_formatter import format_basket_text
 from services.collection_point_resolver import PointResolutionError, resolve_point_code
 from services.price_signal_analyzer import analyze_point_signals
+from services.telegram_message_utils import split_long_message
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -25,8 +27,12 @@ START_TEXT = """澳門採購決策 MVP Bot
 價格只供參考，以店內標示為準。"""
 
 HELP_TEXT = """/check 我想買一包米、兩支洗頭水、一包紙巾
+/check p001 我想買一包米、兩支洗頭水
 /signals p001
+/signals p001 10
 /point 高士德"""
+
+POINT_CODE_PATTERN = re.compile(r"^p\d+$", re.IGNORECASE)
 
 
 def latest_processed_date(processed_root: Path = DEFAULT_PROCESSED_ROOT) -> str | None:
@@ -55,6 +61,12 @@ def _point_for_code(point_code: str) -> dict[str, Any]:
     return resolve_point_code(point_code=point_code)
 
 
+def parse_check_args(args: list[str], default_point_code: str = DEFAULT_POINT_CODE) -> tuple[str, str]:
+    if args and POINT_CODE_PATTERN.match(args[0]):
+        return args[0].lower(), " ".join(args[1:])
+    return default_point_code, " ".join(args)
+
+
 def render_check_message(
     shopping_text: str,
     date_setting: str | None = "latest",
@@ -78,6 +90,7 @@ def render_check_message(
 
 def render_signals_message(
     point_code: str | None = None,
+    top_n: int = 5,
     date_setting: str | None = "latest",
     processed_root: Path = DEFAULT_PROCESSED_ROOT,
 ) -> str:
@@ -89,7 +102,7 @@ def render_signals_message(
         return f"找不到 processed data：date={date}, point_code={selected_point_code}"
 
     signals = analyze_point_signals(date, selected_point_code, processed_root)
-    return format_signals_text(signals)
+    return format_signals_text(signals, top_n=top_n)
 
 
 def render_point_message(query: str) -> str:
@@ -111,36 +124,46 @@ def render_point_message(query: str) -> str:
     )
 
 
+async def _reply_text(update: Any, message: str) -> None:
+    for part in split_long_message(message):
+        await update.message.reply_text(part)
+
+
 async def start(update: Any, context: Any) -> None:
-    await update.message.reply_text(START_TEXT)
+    await _reply_text(update, START_TEXT)
 
 
 async def help_command(update: Any, context: Any) -> None:
-    await update.message.reply_text(HELP_TEXT)
+    await _reply_text(update, HELP_TEXT)
 
 
 async def check_command(update: Any, context: Any) -> None:
-    text = " ".join(context.args)
+    point_code, text = parse_check_args(
+        context.args,
+        default_point_code=context.bot_data.get("default_point_code", DEFAULT_POINT_CODE),
+    )
     message = render_check_message(
         text,
         date_setting=context.bot_data.get("default_date", "latest"),
-        default_point_code=context.bot_data.get("default_point_code", DEFAULT_POINT_CODE),
+        default_point_code=point_code,
     )
-    await update.message.reply_text(message)
+    await _reply_text(update, message)
 
 
 async def signals_command(update: Any, context: Any) -> None:
     point_code = context.args[0] if context.args else context.bot_data.get("default_point_code", DEFAULT_POINT_CODE)
+    top_n = int(context.args[1]) if len(context.args) > 1 and context.args[1].isdigit() else 5
     message = render_signals_message(
         point_code,
+        top_n=top_n,
         date_setting=context.bot_data.get("default_date", "latest"),
     )
-    await update.message.reply_text(message)
+    await _reply_text(update, message)
 
 
 async def point_command(update: Any, context: Any) -> None:
     message = render_point_message(" ".join(context.args))
-    await update.message.reply_text(message)
+    await _reply_text(update, message)
 
 
 def build_application(token: str, default_point_code: str = DEFAULT_POINT_CODE, default_date: str = "latest") -> Any:
