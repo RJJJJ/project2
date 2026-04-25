@@ -12,26 +12,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from services.consumer_price_api import ConsumerPriceApi
+from services.category_presets import parse_categories, resolve_categories
 from services.price_flattener import flatten_items_price_response, flatten_supermarkets_response
 
 
 DEFAULT_CONFIG = PROJECT_ROOT / "config" / "collection_points.json"
-
-
-def parse_categories(value: str | None) -> list[int]:
-    if not value:
-        return list(range(1, 19)) + [19]
-    categories: list[int] = []
-    for part in value.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if "-" in part:
-            start, end = part.split("-", 1)
-            categories.extend(range(int(start), int(end) + 1))
-        else:
-            categories.append(int(part))
-    return categories
 
 
 def load_points(config_path: Path) -> list[dict[str, Any]]:
@@ -122,13 +107,14 @@ def fetch_point(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch Consumer Council prices for one collection point.")
     parser.add_argument("--point-code", required=True)
-    parser.add_argument("--categories", default="1-18,19")
+    parser.add_argument("--categories")
+    parser.add_argument("--preset", choices=("demo_daily", "food_basic", "household", "all_basic"))
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--date", default=date.today().isoformat())
     args = parser.parse_args()
 
     point = find_point(load_points(Path(args.config)), args.point_code)
-    summary = fetch_point(point, parse_categories(args.categories), args.date)
+    summary = fetch_point(point, resolve_categories(args.categories, args.preset), args.date)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 1 if summary["failed_requests"] else 0
 

@@ -11,7 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.fetch_collection_point import DEFAULT_CONFIG, fetch_point, load_points, parse_categories
+from scripts.fetch_collection_point import DEFAULT_CONFIG, fetch_point, load_points
+from services.category_presets import resolve_categories
 from services.consumer_price_api import ConsumerPriceApi
 
 
@@ -27,7 +28,8 @@ def merge_summary(total: dict[str, Any], current: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch Consumer Council prices for all configured collection points.")
     parser.add_argument("--max-points", type=int)
-    parser.add_argument("--categories", default="1-18,19")
+    parser.add_argument("--categories")
+    parser.add_argument("--preset", choices=("demo_daily", "food_basic", "household", "all_basic"))
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--date", default=date.today().isoformat())
     args = parser.parse_args()
@@ -36,7 +38,7 @@ def main() -> int:
     if args.max_points is not None:
         points = points[: args.max_points]
 
-    categories = parse_categories(args.categories)
+    categories = resolve_categories(args.categories, args.preset)
     client = ConsumerPriceApi()
     summary: dict[str, Any] = {
         "points_processed": 0,
