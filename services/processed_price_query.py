@@ -9,18 +9,23 @@ from services.processed_data_loader import (
     load_price_records,
     load_supermarkets,
 )
+from services.product_aliases import expand_keyword
 
 
-def _match_keyword(row: dict[str, Any], keyword: str) -> bool:
-    normalized = keyword.strip().casefold()
-    if not normalized:
-        return True
+def _matched_alias(row: dict[str, Any], aliases: list[str]) -> str | None:
+    if not any(alias.strip() for alias in aliases):
+        return ""
     fields = (
         row.get("product_name"),
-        row.get("quantity"),
         row.get("category_name"),
     )
-    return any(normalized in str(value).casefold() for value in fields if value is not None)
+    for alias in aliases:
+        normalized = alias.strip().casefold()
+        if not normalized:
+            continue
+        if any(normalized in str(value).casefold() for value in fields if value is not None):
+            return alias
+    return None
 
 
 def _join_supermarket_names(
@@ -45,10 +50,12 @@ def search_products(
     keyword: str,
     processed_root: Path | None = None,
 ) -> list[dict[str, Any]]:
+    aliases = expand_keyword(keyword)
     seen: set[Any] = set()
     products: list[dict[str, Any]] = []
     for row in load_price_records(date, point_code, processed_root):
-        if not _match_keyword(row, keyword):
+        matched_alias = _matched_alias(row, aliases)
+        if matched_alias is None:
             continue
         product_oid = row.get("product_oid")
         if product_oid in seen:
@@ -61,6 +68,7 @@ def search_products(
                 "quantity": row.get("quantity"),
                 "category_id": row.get("category_id"),
                 "category_name": row.get("category_name"),
+                "matched_alias": matched_alias,
             }
         )
     return products
@@ -72,11 +80,20 @@ def get_prices_for_keyword(
     keyword: str,
     processed_root: Path | None = None,
 ) -> list[dict[str, Any]]:
-    rows = [
-        row
-        for row in load_price_records(date, point_code, processed_root)
-        if _match_keyword(row, keyword)
-    ]
+    aliases = expand_keyword(keyword)
+    rows = []
+    seen: set[tuple[Any, Any, Any, Any]] = set()
+    for row in load_price_records(date, point_code, processed_root):
+        matched_alias = _matched_alias(row, aliases)
+        if matched_alias is None:
+            continue
+        key = (row.get("product_oid"), row.get("supermarket_oid"), row.get("category_id"), row.get("point_code"))
+        if key in seen:
+            continue
+        seen.add(key)
+        output = dict(row)
+        output["matched_alias"] = matched_alias
+        rows.append(output)
     lookup = build_supermarket_lookup(date, point_code, processed_root)
     return _join_supermarket_names(rows, lookup)
 

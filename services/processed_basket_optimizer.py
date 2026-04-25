@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from services.processed_price_query import get_prices_for_keyword
+from services.product_aliases import expand_keyword
 
 
 def parse_items_arg(items_arg: str) -> list[dict[str, Any]]:
@@ -44,7 +45,10 @@ def optimize_basket_cheapest_by_item(
         ]
 
         if not matches:
-            warnings.append(f"No price records found for keyword: {keyword}")
+            aliases = expand_keyword(keyword)
+            warnings.append(
+                f"No price records found for keyword: {keyword}. Tried aliases: {', '.join(aliases)}"
+            )
             continue
 
         cheapest = min(
@@ -68,6 +72,7 @@ def optimize_basket_cheapest_by_item(
                 "category_name": cheapest.get("category_name"),
                 "supermarket_oid": cheapest.get("supermarket_oid"),
                 "supermarket_name": cheapest.get("supermarket_name"),
+                "matched_alias": cheapest.get("matched_alias"),
                 "unit_price_mop": unit_price,
                 "subtotal_mop": subtotal,
             }

@@ -23,6 +23,7 @@ OUTPUT_FIELDS = [
     "price_mop",
     "discount",
     "distance_m",
+    "matched_alias",
 ]
 
 

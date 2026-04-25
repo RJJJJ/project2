@@ -93,6 +93,7 @@ def test_keyword_search_is_correct(tmp_path: Path) -> None:
             "quantity": "10公斤",
             "category_id": 1,
             "category_name": "米類",
+            "matched_alias": "米",
         }
     ]
 
@@ -104,3 +105,31 @@ def test_cheapest_sort_is_correct(tmp_path: Path) -> None:
 
     assert [row["supermarket_oid"] for row in rows] == [175, 52]
     assert [row["price_mop"] for row in rows] == [128.0, 130.0]
+
+
+def test_alias_search_finds_product(tmp_path: Path) -> None:
+    processed_root = make_fixture(tmp_path)
+    point_dir = processed_root / "2026-04-25" / "p001"
+    write_jsonl(
+        point_dir / "category_10_prices.jsonl",
+        [
+            {
+                "point_code": "p001",
+                "product_oid": 200,
+                "product_name": "潘婷 去屑洗髮乳",
+                "quantity": "750毫升",
+                "category_id": 10,
+                "category_name": "個人護理",
+                "supermarket_oid": 52,
+                "price_mop": 45.0,
+                "discount": "",
+                "distance_m": 500,
+            }
+        ],
+    )
+
+    rows = get_prices_for_keyword("2026-04-25", "p001", "洗頭水", processed_root)
+
+    assert len(rows) == 1
+    assert rows[0]["product_name"] == "潘婷 去屑洗髮乳"
+    assert rows[0]["matched_alias"] == "洗髮乳"

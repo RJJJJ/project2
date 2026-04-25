@@ -56,7 +56,7 @@ def make_fixture(tmp_path: Path) -> Path:
             {
                 "point_code": "p001",
                 "product_oid": 99,
-                "product_name": "洗頭水 清爽型",
+                "product_name": "潘婷 去屑洗髮乳",
                 "quantity": "750毫升",
                 "category_id": 10,
                 "category_name": "個人護理",
@@ -89,6 +89,7 @@ def test_single_item_selects_lowest_price(tmp_path: Path) -> None:
 
     assert result["items"][0]["supermarket_oid"] == 175
     assert result["items"][0]["unit_price_mop"] == 128.0
+    assert result["items"][0]["matched_alias"] == "米"
     assert result["estimated_total_mop"] == 128.0
 
 
@@ -103,6 +104,7 @@ def test_multiple_items_total_calculation(tmp_path: Path) -> None:
     )
 
     assert [item["subtotal_mop"] for item in result["items"]] == [128.0, 60.0]
+    assert [item["matched_alias"] for item in result["items"]] == ["米", "洗髮乳"]
     assert result["estimated_total_mop"] == 188.0
 
 
@@ -117,4 +119,4 @@ def test_missing_item_adds_warning(tmp_path: Path) -> None:
     )
 
     assert result["items"] == []
-    assert result["warnings"] == ["No price records found for keyword: 不存在"]
+    assert result["warnings"] == ["No price records found for keyword: 不存在. Tried aliases: 不存在"]
