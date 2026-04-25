@@ -10,7 +10,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from services.processed_basket_optimizer import (
+    optimize_basket,
     optimize_basket_cheapest_by_item,
+    optimize_basket_cheapest_single_store,
+    optimize_basket_cheapest_two_stores,
     parse_items_arg,
 )
 
@@ -20,16 +23,24 @@ def main() -> int:
     parser.add_argument("--date", required=True)
     parser.add_argument("--point-code", required=True)
     parser.add_argument("--items", required=True, help='Example: "米:1,洗頭水:2"')
+    parser.add_argument(
+        "--plan",
+        choices=("cheapest_by_item", "single_store", "two_stores", "all"),
+        default="all",
+    )
     parser.add_argument("--processed-root", default=str(PROJECT_ROOT / "data" / "processed"))
     args = parser.parse_args()
 
     items = parse_items_arg(args.items)
-    result = optimize_basket_cheapest_by_item(
-        args.date,
-        args.point_code,
-        items,
-        processed_root=Path(args.processed_root),
-    )
+    processed_root = Path(args.processed_root)
+    if args.plan == "cheapest_by_item":
+        result = optimize_basket_cheapest_by_item(args.date, args.point_code, items, processed_root)
+    elif args.plan == "single_store":
+        result = optimize_basket_cheapest_single_store(args.date, args.point_code, items, processed_root)
+    elif args.plan == "two_stores":
+        result = optimize_basket_cheapest_two_stores(args.date, args.point_code, items, processed_root)
+    else:
+        result = optimize_basket(args.date, args.point_code, items, processed_root)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
