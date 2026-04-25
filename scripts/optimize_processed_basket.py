@@ -16,6 +16,7 @@ from services.processed_basket_optimizer import (
     optimize_basket_cheapest_two_stores,
     parse_items_arg,
 )
+from services.plan_recommender import recommend_plan
 
 
 def main() -> int:
@@ -28,6 +29,7 @@ def main() -> int:
         choices=("cheapest_by_item", "single_store", "two_stores", "all"),
         default="all",
     )
+    parser.add_argument("--convenience-threshold", type=float, default=5.0)
     parser.add_argument("--processed-root", default=str(PROJECT_ROOT / "data" / "processed"))
     args = parser.parse_args()
 
@@ -41,6 +43,7 @@ def main() -> int:
         result = optimize_basket_cheapest_two_stores(args.date, args.point_code, items, processed_root)
     else:
         result = optimize_basket(args.date, args.point_code, items, processed_root)
+        result.update(recommend_plan(result["plans"], args.convenience_threshold))
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
