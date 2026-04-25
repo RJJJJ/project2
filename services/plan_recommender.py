@@ -22,7 +22,7 @@ def _total(plan: dict[str, Any] | None) -> float | None:
 def recommend_plan(
     plans: list[dict[str, Any]],
     convenience_threshold_mop: float = 5.0,
-) -> dict[str, str | None]:
+) -> dict[str, str]:
     cheapest_by_item = _plan_by_type(plans, "cheapest_by_item")
     cheapest_single_store = _plan_by_type(plans, "cheapest_single_store")
     cheapest_two_stores = _plan_by_type(plans, "cheapest_two_stores")
