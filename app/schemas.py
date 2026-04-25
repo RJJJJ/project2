@@ -1,0 +1,29 @@
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel
+
+
+class BasketAskRequest(BaseModel):
+    text: str
+    point_code: str | None = None
+    point_name: str | None = None
+    district: str | None = None
+    date: str = "latest"
+    format: str = "json"
+
+
+class BasketAskResponse(BaseModel):
+    date: str
+    point_code: str
+    parsed_items: list[dict[str, Any]]
+    plans: list[dict[str, Any]]
+    warnings: list[str]
+    recommended_plan_type: str | None = None
+    recommendation_reason: str | None = None
+
+
+class TextResponse(BaseModel):
+    text: str
+
