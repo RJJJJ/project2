@@ -194,24 +194,25 @@ def optimize_basket_cheapest_single_store(
         for store_oid in store_oids
         if (plan := _best_plan_for_store_set("cheapest_single_store", {store_oid}, items, rows_by_keyword))
     ]
-    if not candidates:
-        warnings.append("No single store can cover all requested keywords.")
+
+    if candidates:
+        best = min(candidates, key=lambda plan: float(plan["estimated_total_mop"]))
+        best["date"] = date
+        best["point_code"] = point_code
+        best["warnings"] = warnings
+        return best
+
+    warnings.append("No single store can cover all requested keywords.")
     return {
         "date": date,
         "point_code": point_code,
         "plan_type": "cheapest_single_store",
         "store_count": 0,
-            "stores": [],
-            "items": [],
-            "estimated_total_mop": None,
-            "warnings": warnings,
-        }
-
-    best = min(candidates, key=lambda plan: float(plan["estimated_total_mop"]))
-    best["date"] = date
-    best["point_code"] = point_code
-    best["warnings"] = warnings
-    return best
+        "stores": [],
+        "items": [],
+        "estimated_total_mop": None,
+        "warnings": warnings,
+    }
 
 
 def optimize_basket_cheapest_two_stores(
@@ -234,28 +235,39 @@ def optimize_basket_cheapest_two_stores(
     candidates: list[dict[str, Any]] = []
     for size in (1, 2):
         for store_group in combinations(store_oids, size):
-            plan = _best_plan_for_store_set("cheapest_two_stores", set(store_group), items, rows_by_keyword)
+            plan = _best_plan_for_store_set(
+                "cheapest_two_stores",
+                set(store_group),
+                items,
+                rows_by_keyword,
+            )
             if plan:
                 candidates.append(plan)
 
-    if not candidates:
-        warnings.append("No one-store or two-store combination can cover all requested keywords.")
+    if candidates:
+        best = min(
+            candidates,
+            key=lambda plan: (
+                float(plan["estimated_total_mop"]),
+                int(plan["store_count"]),
+            ),
+        )
+        best["date"] = date
+        best["point_code"] = point_code
+        best["warnings"] = warnings
+        return best
+
+    warnings.append("No one-store or two-store combination can cover all requested keywords.")
     return {
         "date": date,
         "point_code": point_code,
         "plan_type": "cheapest_two_stores",
         "store_count": 0,
-            "stores": [],
-            "items": [],
-            "estimated_total_mop": None,
-            "warnings": warnings,
-        }
-
-    best = min(candidates, key=lambda plan: (float(plan["estimated_total_mop"]), int(plan["store_count"])))
-    best["date"] = date
-    best["point_code"] = point_code
-    best["warnings"] = warnings
-    return best
+        "stores": [],
+        "items": [],
+        "estimated_total_mop": None,
+        "warnings": warnings,
+    }
 
 
 def optimize_basket(

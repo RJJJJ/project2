@@ -233,6 +233,7 @@ def test_two_store_combination_covers_all_items(tmp_path: Path) -> None:
     result = optimize_basket_cheapest_two_stores("2026-04-25", "p001", items, processed_root)
 
     assert result["store_count"] == 2
+    assert result["items"] != []
     assert {store["supermarket_oid"] for store in result["stores"]} == {1, 3}
     assert result["estimated_total_mop"] == 110.0
     assert [item["supermarket_oid"] for item in result["items"]] == [1, 3, 3]
@@ -306,3 +307,62 @@ def test_optimize_basket_outputs_all_plans_and_totals(tmp_path: Path) -> None:
     assert result["plans"][0]["estimated_total_mop"] == 150.0
     assert result["plans"][1]["estimated_total_mop"] == 170.0
     assert result["plans"][2]["estimated_total_mop"] == 150.0
+
+
+def test_two_store_returns_non_empty_when_by_item_proves_two_stores_cover(tmp_path: Path) -> None:
+    point_dir = tmp_path / "2026-04-25" / "p001"
+    write_jsonl(
+        point_dir / "supermarkets.jsonl",
+        [
+            {"point_code": "p001", "supermarket_oid": 10, "supermarket_name": "Store X"},
+            {"point_code": "p001", "supermarket_oid": 20, "supermarket_name": "Store Y"},
+        ],
+    )
+    write_jsonl(
+        point_dir / "category_1_prices.jsonl",
+        [
+            {
+                "point_code": "p001",
+                "product_oid": 1,
+                "product_name": "香米",
+                "quantity": "5公斤",
+                "category_id": 1,
+                "category_name": "米類",
+                "supermarket_oid": 10,
+                "price_mop": 40.0,
+            },
+            {
+                "point_code": "p001",
+                "product_oid": 2,
+                "product_name": "潘婷 洗髮乳",
+                "quantity": "750毫升",
+                "category_id": 10,
+                "category_name": "個人護理",
+                "supermarket_oid": 20,
+                "price_mop": 20.0,
+            },
+            {
+                "point_code": "p001",
+                "product_oid": 3,
+                "product_name": "Tempo 紙巾",
+                "quantity": "6包",
+                "category_id": 11,
+                "category_name": "紙巾",
+                "supermarket_oid": 20,
+                "price_mop": 15.0,
+            },
+        ],
+    )
+    items = parse_items_arg("米:1,洗頭水:2,紙巾:1")
+
+    by_item = optimize_basket_cheapest_by_item("2026-04-25", "p001", items, tmp_path)
+    two_stores = optimize_basket_cheapest_two_stores("2026-04-25", "p001", items, tmp_path)
+    single_store = optimize_basket_cheapest_single_store("2026-04-25", "p001", items, tmp_path)
+
+    assert by_item["store_count"] == 2
+    assert by_item["estimated_total_mop"] == 95.0
+    assert single_store["store_count"] == 0
+    assert single_store["items"] == []
+    assert two_stores["store_count"] == 2
+    assert two_stores["items"] != []
+    assert two_stores["estimated_total_mop"] == 95.0
