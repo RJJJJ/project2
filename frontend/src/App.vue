@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { askBasket, fetchPoints, fetchSignals, fetchProductCandidates } from './api'
+import { askBasket, fetchHistoricalSignals, fetchPoints, fetchSignals, fetchProductCandidates } from './api'
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 
@@ -9,10 +9,13 @@ const pointCode = ref('p001')
 const shoppingText = ref(defaultText)
 const basketResult = ref(null)
 const signals = ref(null)
+const historicalSignals = ref(null)
 const error = ref('')
 const loadingPoints = ref(false)
 const loadingBasket = ref(false)
 const loadingSignals = ref(false)
+const loadingHistoricalSignals = ref(false)
+const historicalSignalsError = ref('')
 const loadingCandidates = ref(false)
 const candidateGroups = ref([])
 const selectedCandidateOids = ref({})
@@ -33,6 +36,8 @@ const selectedPlan = computed(() => {
 
 const otherPlans = computed(() => basketResult.value?.plans || [])
 const signalItems = computed(() => signals.value?.largest_price_gap || [])
+const historicalSignalItems = computed(() => historicalSignals.value?.signals || [])
+const historicalSignalWarnings = computed(() => historicalSignals.value?.warnings || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
 const selectedProducts = computed(() =>
   candidateGroups.value
@@ -55,6 +60,14 @@ function money(value) {
 function percent(value) {
   if (value === null || value === undefined) return 'N/A'
   return `${Number(value).toFixed(1)}%`
+}
+
+function historicalSignalLabel(signalType) {
+  return {
+    near_historical_low: '接近歷史低價',
+    below_average: '低於近期均價',
+    unusual_high: '異常偏高',
+  }[signalType] || signalType || '歷史訊號'
 }
 
 function readableError(err) {
@@ -90,6 +103,25 @@ async function loadSignals() {
   }
 }
 
+async function loadHistoricalSignals() {
+  if (!pointCode.value) return
+  loadingHistoricalSignals.value = true
+  historicalSignalsError.value = ''
+  try {
+    historicalSignals.value = await fetchHistoricalSignals({
+      pointCode: pointCode.value,
+      date: 'latest',
+      lookbackDays: 30,
+      topN: 5,
+    })
+  } catch (err) {
+    historicalSignals.value = null
+    historicalSignalsError.value = '暫時未能載入歷史抵買訊號，請稍後再試。'
+  } finally {
+    loadingHistoricalSignals.value = false
+  }
+}
+
 async function generatePlan() {
   loadingBasket.value = true
   error.value = ''
@@ -98,7 +130,7 @@ async function generatePlan() {
       text: shoppingText.value,
       pointCode: pointCode.value,
     })
-    await loadSignals()
+    await Promise.all([loadSignals(), loadHistoricalSignals()])
   } catch (err) {
     basketResult.value = null
     error.value = readableError(err)
@@ -145,7 +177,7 @@ async function findCandidates() {
     if (!groups.length) {
       error.value = '未能從輸入解析出商品，請嘗試使用米、洗頭水、紙巾等關鍵字。'
     }
-    await loadSignals()
+    await Promise.all([loadSignals(), loadHistoricalSignals()])
   } catch (err) {
     candidateGroups.value = []
     error.value = readableError(err)
@@ -163,7 +195,7 @@ async function generatePlanWithSelectedProducts() {
       pointCode: pointCode.value,
       selectedProducts: selectedProducts.value,
     })
-    await loadSignals()
+    await Promise.all([loadSignals(), loadHistoricalSignals()])
   } catch (err) {
     basketResult.value = null
     error.value = readableError(err)
@@ -174,11 +206,12 @@ async function generatePlanWithSelectedProducts() {
 
 watch(pointCode, () => {
   loadSignals()
+  loadHistoricalSignals()
 })
 
 onMounted(async () => {
   await loadPoints()
-  await loadSignals()
+  await Promise.all([loadSignals(), loadHistoricalSignals()])
 })
 </script>
 
@@ -273,6 +306,59 @@ onMounted(async () => {
             </article>
           </div>
           <p v-else class="mt-3 text-sm text-slate-500">暫無價差訊號。</p>
+
+          <div class="mt-5 border-t border-slate-100 pt-4">
+            <h2 class="text-base font-semibold text-slate-950">歷史抵買訊號</h2>
+            <p v-if="loadingHistoricalSignals" class="mt-3 text-sm text-slate-500">載入歷史訊號中...</p>
+            <p v-else-if="historicalSignalsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              {{ historicalSignalsError }}
+            </p>
+            <div v-else-if="historicalSignalItems.length" class="mt-3 grid gap-3">
+              <article
+                v-for="item in historicalSignalItems"
+                :key="`historical-${item.signal_type}-${item.product_oid}`"
+                class="rounded-lg border border-emerald-100 bg-emerald-50/40 p-3"
+              >
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <h3 class="text-sm font-medium leading-5 text-slate-950">{{ item.product_name }}</h3>
+                  <span
+                    class="w-fit rounded-full px-2 py-1 text-xs font-medium"
+                    :class="item.signal_type === 'unusual_high' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-600 text-white'"
+                  >
+                    {{ historicalSignalLabel(item.signal_type) }}
+                  </span>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div class="rounded-md bg-white p-2">
+                    <div class="text-xs text-slate-500">當前最低價</div>
+                    <div class="mt-1 font-medium text-slate-950">{{ money(item.current_min_price_mop) }}</div>
+                    <div class="mt-1 text-xs text-slate-600">{{ item.store_name || 'N/A' }}</div>
+                  </div>
+                  <div class="rounded-md bg-white p-2">
+                    <div class="text-xs text-slate-500">歷史最低價</div>
+                    <div class="mt-1 font-medium text-slate-950">{{ money(item.historical_min_price_mop) }}</div>
+                  </div>
+                  <div class="rounded-md bg-white p-2">
+                    <div class="text-xs text-slate-500">近期平均價</div>
+                    <div class="mt-1 font-medium text-slate-950">{{ money(item.historical_avg_price_mop) }}</div>
+                  </div>
+                  <div class="rounded-md bg-white p-2">
+                    <div class="text-xs text-slate-500">低於平均百分比</div>
+                    <div class="mt-1 font-medium" :class="item.discount_vs_avg_percent >= 0 ? 'text-emerald-700' : 'text-amber-700'">
+                      {{ percent(item.discount_vs_avg_percent) }}
+                    </div>
+                  </div>
+                </div>
+                <p class="mt-3 text-sm leading-5 text-slate-700">{{ item.reason }}</p>
+              </article>
+            </div>
+            <p v-else class="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+              暫時未有足夠歷史資料，完成多次每週更新後可顯示歷史抵買訊號。
+              <span v-if="historicalSignalWarnings.length" class="mt-1 block text-xs text-slate-500">
+                {{ historicalSignalWarnings.join('；') }}
+              </span>
+            </p>
+          </div>
         </aside>
       </section>
 

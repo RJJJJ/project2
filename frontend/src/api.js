@@ -49,3 +49,12 @@ export function fetchProductCandidates({ keyword, pointCode, limit = 8 }) {
 export function fetchSignals(pointCode, topN = 5) {
   return request(`/api/signals/${encodeURIComponent(pointCode)}?date=latest&top_n=${topN}`)
 }
+
+export function fetchHistoricalSignals({ pointCode, date = 'latest', lookbackDays = 30, topN = 5 }) {
+  const params = new URLSearchParams({
+    date,
+    lookback_days: String(lookbackDays),
+    top_n: String(topN),
+  })
+  return request(`/api/historical-signals/${encodeURIComponent(pointCode)}?${params.toString()}`)
+}

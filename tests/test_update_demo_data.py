@@ -33,6 +33,10 @@ def _fake_signals(date: str, point_code: str, processed_root: Path) -> dict:
     return {"largest_price_gap": [{"product_oid": 10}]}
 
 
+def _fake_historical_signals(**kwargs) -> dict:
+    return {"signals": [{"product_oid": 10}], "warnings": ["sample warning"]}
+
+
 def test_report_summary_can_be_generated() -> None:
     points = [
         {
@@ -41,6 +45,7 @@ def test_report_summary_can_be_generated() -> None:
             "validation_ok": True,
             "basket_ok": True,
             "signals_ok": True,
+            "historical_signals_ok": True,
         }
     ]
 
@@ -58,6 +63,7 @@ def test_report_summary_can_be_generated() -> None:
         "points_fetch_ok": 1,
         "points_basket_ok": 1,
         "points_signals_ok": 1,
+        "points_historical_signals_ok": 1,
         "failed_points": [],
     }
 
@@ -70,6 +76,7 @@ def test_failed_point_is_recorded_instead_of_crashing() -> None:
         {"ok": False, "errors": ["processed directory not found"]},
         {"ok": False, "errors": ["basket failed"]},
         {"ok": False, "errors": ["signals failed"]},
+        {"ok": False, "errors": ["historical failed"]},
     )
     report = updater.build_update_report(
         points=[result],
@@ -82,6 +89,7 @@ def test_failed_point_is_recorded_instead_of_crashing() -> None:
     assert result["fetch_ok"] is False
     assert report["summary"]["failed_points"] == ["p404"]
     assert "basket failed" in result["errors"]
+    assert "historical failed" in result["errors"]
 
 
 def test_sync_demo_data_uses_temp_replace_and_keeps_source(tmp_path: Path) -> None:
@@ -128,11 +136,15 @@ def test_dry_run_collect_does_not_write_demo_data(tmp_path: Path) -> None:
         ),
         basket_builder=_fake_basket,
         signals_analyzer=_fake_signals,
+        historical_signals_analyzer=_fake_historical_signals,
     )
 
     assert report["summary"]["failed_points"] == []
     assert report["sync_demo_data"] is False
     assert list(demo_root.iterdir()) == []
+    assert report["points"][0]["historical_signals_ok"] is True
+    assert report["points"][0]["historical_signals_count"] == 1
+    assert report["points"][0]["historical_warnings"] == ["sample warning"]
 
 
 def test_markdown_report_contains_point_table() -> None:
@@ -149,6 +161,8 @@ def test_markdown_report_contains_point_table() -> None:
                 "validation_ok": True,
                 "basket_ok": True,
                 "signals_ok": True,
+                "historical_signals_ok": True,
+                "historical_signals_count": 2,
                 "errors": [],
             }
         ],
@@ -160,5 +174,18 @@ def test_markdown_report_contains_point_table() -> None:
 
     markdown = updater.build_markdown_report(report)
 
-    assert "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | errors |" in markdown
-    assert "| p001 | Point 1 | Macau | 1 | 2 | 3 | true | true | true | true |  |" in markdown
+    assert "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | historical_ok | historical_count | errors |" in markdown
+    assert "| p001 | Point 1 | Macau | 1 | 2 | 3 | true | true | true | true | true | 2 |  |" in markdown
+
+
+def test_historical_signal_smoke_treats_warnings_as_ok() -> None:
+    result = updater.run_historical_signals_smoke(
+        "2026-04-25",
+        "p001",
+        Path("unused"),
+        historical_signals_analyzer=_fake_historical_signals,
+    )
+
+    assert result["ok"] is True
+    assert result["signals_count"] == 1
+    assert result["warnings"] == ["sample warning"]

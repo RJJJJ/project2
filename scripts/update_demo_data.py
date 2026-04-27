@@ -21,6 +21,7 @@ from scripts.fetch_collection_point import DEFAULT_CONFIG, fetch_point, load_poi
 from scripts.validate_processed_data import read_jsonl
 from services.category_presets import resolve_categories
 from services.consumer_price_api import ConsumerPriceApi
+from services.historical_price_signal_analyzer import analyze_historical_price_signals
 from services.price_signal_analyzer import analyze_point_signals
 
 
@@ -190,21 +191,49 @@ def run_signals_smoke(
     return result
 
 
+def run_historical_signals_smoke(
+    date_value: str,
+    point_code: str,
+    processed_root: Path,
+    historical_signals_analyzer: Callable[..., dict[str, Any]] = analyze_historical_price_signals,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {"ok": False, "signals_count": 0, "warnings": [], "errors": []}
+    try:
+        signals = historical_signals_analyzer(
+            point_code=point_code,
+            current_date=date_value,
+            lookback_days=30,
+            top_n=10,
+            processed_root=processed_root,
+        )
+        result["ok"] = True
+        result["signals_count"] = len(_safe_list(signals.get("signals")))
+        result["warnings"].extend(str(item) for item in _safe_list(signals.get("warnings")))
+    except Exception as exc:  # noqa: BLE001 - update report should collect point failures.
+        result["errors"].append(f"historical price signal analyzer failed: {exc}")
+    return result
+
+
 def summarize_point_result(
     point: dict[str, Any],
     fetch_summary: dict[str, Any] | None,
     validation: dict[str, Any],
     basket: dict[str, Any],
     signals: dict[str, Any],
+    historical_signals: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    historical_signals = historical_signals or {}
     failed_requests = _safe_list((fetch_summary or {}).get("failed_requests"))
     errors = []
     warnings = []
     errors.extend(str(item) for item in validation.get("errors", []))
     errors.extend(str(item) for item in basket.get("errors", []))
     errors.extend(str(item) for item in signals.get("errors", []))
+    errors.extend(str(item) for item in historical_signals.get("errors", []))
     warnings.extend(str(item) for item in validation.get("warnings", []))
     warnings.extend(str(item) for item in basket.get("warnings", []))
+    historical_warnings = [str(item) for item in historical_signals.get("warnings", [])]
+    warnings.extend(historical_warnings)
 
     return {
         "point_code": point.get("point_code"),
@@ -224,6 +253,9 @@ def summarize_point_result(
         "basket_total": basket.get("basket_total"),
         "signals_ok": bool(signals.get("ok")),
         "largest_gap_count": signals.get("largest_gap_count", 0),
+        "historical_signals_ok": bool(historical_signals.get("ok")),
+        "historical_signals_count": historical_signals.get("signals_count", 0),
+        "historical_warnings": historical_warnings,
         "warnings": warnings,
         "errors": errors,
     }
@@ -245,6 +277,7 @@ def build_update_report(
         or not point.get("validation_ok")
         or not point.get("basket_ok")
         or not point.get("signals_ok")
+        or point.get("historical_signals_ok") is False
     ]
     return {
         "generated_at": generated_at or _iso_now(),
@@ -258,6 +291,7 @@ def build_update_report(
             "points_fetch_ok": sum(1 for point in points if point.get("fetch_ok")),
             "points_basket_ok": sum(1 for point in points if point.get("basket_ok")),
             "points_signals_ok": sum(1 for point in points if point.get("signals_ok")),
+            "points_historical_signals_ok": sum(1 for point in points if point.get("historical_signals_ok")),
             "failed_points": failed_points,
         },
     }
@@ -277,8 +311,8 @@ def build_markdown_report(report: dict[str, Any]) -> str:
         "",
         "## Point Results",
         "",
-        "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | errors |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | historical_ok | historical_count | errors |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for point in report.get("points") or []:
         lines.append(
@@ -295,6 +329,8 @@ def build_markdown_report(report: dict[str, Any]) -> str:
                     _markdown_value(point.get("validation_ok")),
                     _markdown_value(point.get("basket_ok")),
                     _markdown_value(point.get("signals_ok")),
+                    _markdown_value(point.get("historical_signals_ok")),
+                    _markdown_value(point.get("historical_signals_count")),
                     _markdown_value(point.get("errors")),
                 ]
             )
@@ -359,7 +395,13 @@ def sync_processed_to_demo_data(
     try:
         if demo_processed_root.exists():
             demo_processed_root.replace(backup_root)
-        tmp_root.replace(demo_processed_root)
+        try:
+            tmp_root.replace(demo_processed_root)
+        except PermissionError:
+            # Windows can reject os.replace for directories even after the target
+            # has been moved; shutil.move keeps the temp-root swap atomic enough
+            # for local demo data while preserving the backup rollback below.
+            shutil.move(str(tmp_root), str(demo_processed_root))
         if backup_root.exists():
             shutil.rmtree(backup_root)
     except Exception:
@@ -376,6 +418,7 @@ def collect_update_results(
     fetcher: Callable[[dict[str, Any], list[int], str, ConsumerPriceApi | None], dict[str, Any]] = fetch_point,
     basket_builder: Callable[[str, str, str, Path], dict[str, Any]] = build_result,
     signals_analyzer: Callable[[str, str, Path], dict[str, Any]] = analyze_point_signals,
+    historical_signals_analyzer: Callable[..., dict[str, Any]] = analyze_historical_price_signals,
 ) -> dict[str, Any]:
     selected_points = load_points(options.config_path)[: options.max_points]
     point_codes = [str(point["point_code"]) for point in selected_points]
@@ -408,7 +451,13 @@ def collect_update_results(
             }
         basket = run_basket_smoke(run_date, point_code, options.processed_root, basket_builder=basket_builder)
         signals = run_signals_smoke(run_date, point_code, options.processed_root, signals_analyzer=signals_analyzer)
-        point_results.append(summarize_point_result(point, fetch_summary, validation, basket, signals))
+        historical_signals = run_historical_signals_smoke(
+            run_date,
+            point_code,
+            options.processed_root,
+            historical_signals_analyzer=historical_signals_analyzer,
+        )
+        point_results.append(summarize_point_result(point, fetch_summary, validation, basket, signals, historical_signals))
 
     return build_update_report(
         points=point_results,
