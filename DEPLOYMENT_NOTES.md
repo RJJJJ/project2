@@ -69,3 +69,20 @@ ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
 ```text
 VITE_API_BASE_URL=https://your-backend-url
 ```
+
+## 更新線上 Demo Data
+
+- `demo_data/processed` 是 Render fallback data；Render 上的 `PROCESSED_ROOT=demo_data/processed` 會讀取這份已提交資料。
+- 更新流程：
+
+```bash
+python scripts/update_demo_data.py --max-points 5 --preset demo_daily --sync-demo-data
+git add demo_data/processed UPDATE_REPORT.md data/reports/update_report.json
+git commit -m "Update demo data"
+git push origin main
+```
+
+- `scripts/update_demo_data.py` 會先更新 `data/processed/{date}`，再驗證 processed data、basket pipeline 與 price signals，生成 `UPDATE_REPORT.md` 與 `data/reports/update_report.json`。
+- 使用 `--sync-demo-data` 時，script 只會把最新 processed date 的前 5 個 point 複製到 `demo_data/processed/{date}/{point_code}`；不會複製 raw data。
+- 請勿 commit `data/raw/` 或 `data/processed/`。
+- commit `demo_data/processed` 並 push 後，Render 會按 repo 更新重新部署，線上 demo fallback data 也會更新。

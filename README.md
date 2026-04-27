@@ -179,3 +179,26 @@ python scripts/run_api.py
 cd frontend
 npm run dev
 ```
+
+## 更新部署 Demo Data
+
+一條命令抓取前 5 個 collection point 的 `demo_daily` processed data、執行 basket / signals smoke test、生成報告，並同步 Render fallback data：
+
+```bash
+python scripts/update_demo_data.py --max-points 5 --preset demo_daily --sync-demo-data
+```
+
+預設報告輸出：
+
+- `UPDATE_REPORT.md`：建議追蹤，方便部署更新記錄。
+- `data/reports/update_report.json`：本輪作為機器可讀部署報告，可追蹤；如果後續更新太頻繁，也可改為忽略。
+
+部署資料更新完成後：
+
+```bash
+git add demo_data/processed UPDATE_REPORT.md data/reports/update_report.json
+git commit -m "Update demo data"
+git push origin main
+```
+
+注意：不要 commit `data/raw/` 或 `data/processed/`；只 commit `demo_data/processed` 作為線上 demo fallback data。

@@ -280,7 +280,8 @@ onMounted(async () => {
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-slate-950">確認商品 / 規格</h2>
-            <p class="mt-1 text-sm text-slate-600">先選定具體商品，再用所選 product_oid 生成採購方案。</p>
+            <p class="mt-1 text-sm text-slate-600">不指定 product_oid，系統會使用原有快速匹配與最低價方案。</p>
+            <p class="mt-1 text-sm text-slate-500">系統推薦商品會優先考慮常見規格、覆蓋超市數與價格，不等同於單純最低價。</p>
           </div>
           <button
             type="button"
@@ -313,8 +314,8 @@ onMounted(async () => {
                   value=""
                 />
                 <div>
-                  <div class="font-medium text-slate-950">不指定，讓系統推薦</div>
-                  <div class="mt-1 text-sm text-slate-600">不傳入 product_oid，使用原有快速匹配與最低價方案。</div>
+                  <div class="font-medium text-slate-950">使用快速最低價匹配</div>
+                  <div class="mt-1 text-sm text-slate-600">不指定 product_oid，系統會使用原有快速匹配與最低價方案。</div>
                 </div>
               </label>
 
