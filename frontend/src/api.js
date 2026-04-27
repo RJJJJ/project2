@@ -70,3 +70,15 @@ export function fetchWatchlistSignals({ pointCode, items, date = 'latest', lookb
     }),
   })
 }
+
+export function fetchWatchlistAlerts({ pointCode, items, date = 'latest', lookbackDays = 30 }) {
+  return request('/api/watchlist/alerts', {
+    method: 'POST',
+    body: JSON.stringify({
+      point_code: pointCode,
+      date,
+      lookback_days: lookbackDays,
+      items,
+    }),
+  })
+}

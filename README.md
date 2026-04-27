@@ -4,20 +4,29 @@
 
 ## Live MVP
 
-- Web Demo: https://project2-three-rho.vercel.app
-- API Docs: https://macau-shopping-api.onrender.com/docs
+- Live Web Demo URL: https://project2-three-rho.vercel.app
+- Live API Docs: https://macau-shopping-api.onrender.com/docs
 
 ## 商品候選確認
 
 Web Demo 支援「先選商品規格」：系統會推薦常見規格（例如米類 5公斤 / 10公斤家庭包裝），用戶仍可自行改選或選擇不指定。
 
-## 目前功能
+## 目前功能總覽
 
-- FastAPI Backend：提供健康檢查、採集點、購物籃方案、價差訊號 API
-- Vue Web Demo：選擇地區、輸入購物清單、顯示推薦方案與價差訊號
-- Telegram Bot：支援 `/check`、`/signals`、`/point`
-- 多地區 collection points：支援前 5 個採集點設定
-- Demo data 抓取與多地區驗收工具
+- 多地區比價：以採集點 / 地區切換附近超市價格資料。
+- 商品候選確認：先選商品規格後再生成方案，避免規格誤配。
+- 系統推薦常見規格：候選商品會考慮常見規格、覆蓋與價格。
+- 本區價差訊號：比較同日同區超市價差。
+- 歷史抵買訊號：用 processed historical data 判斷接近低價、低於均價與異常偏高。
+- Watchlist 收藏商品：Web Demo 以 browser localStorage 保存關注商品。
+- Alert Rules 提醒候選：根據關注商品與價格訊號生成「是否值得提醒」候選，不做真正推送。
+- Weekly Demo Data Update：每週 demo data update workflow 產生驗收 report。
+
+## 部署後 smoke check
+
+```bash
+python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.onrender.com
+```
 
 ## 快速開始
 

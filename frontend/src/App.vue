@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { askBasket, fetchHistoricalSignals, fetchPoints, fetchSignals, fetchProductCandidates, fetchWatchlistSignals } from './api'
+import { askBasket, fetchHistoricalSignals, fetchPoints, fetchSignals, fetchProductCandidates, fetchWatchlistAlerts, fetchWatchlistSignals } from './api'
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 const WATCHLIST_STORAGE_KEY = 'macau-shopping-watchlist-v1'
@@ -24,6 +24,9 @@ const watchlist = ref([])
 const watchlistSignals = ref(null)
 const loadingWatchlistSignals = ref(false)
 const watchlistSignalsError = ref('')
+const watchlistAlerts = ref(null)
+const loadingWatchlistAlerts = ref(false)
+const watchlistAlertsError = ref('')
 
 const planLabels = {
   cheapest_by_item: '單品最低價',
@@ -44,6 +47,7 @@ const signalItems = computed(() => signals.value?.largest_price_gap || [])
 const historicalSignalItems = computed(() => historicalSignals.value?.signals || [])
 const historicalSignalWarnings = computed(() => historicalSignals.value?.warnings || [])
 const watchlistSignalItems = computed(() => watchlistSignals.value?.items || [])
+const watchlistAlertItems = computed(() => watchlistAlerts.value?.alerts || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
 const selectedProducts = computed(() =>
   candidateGroups.value
@@ -119,6 +123,7 @@ function removeFromWatchlist(productOid, itemPointCode) {
   saveWatchlistToStorage()
   if (!watchlist.value.length) {
     watchlistSignals.value = null
+    watchlistAlerts.value = null
   }
 }
 
@@ -134,6 +139,31 @@ function watchlistStatusLabel(signal) {
   return '暫無明顯訊號'
 }
 
+function severityLabel(severity) {
+  return {
+    high: '高',
+    medium: '中',
+    low: '低',
+  }[severity] || severity || 'N/A'
+}
+
+function alertTypeLabel(alertType) {
+  return historicalSignalLabel(alertType)
+}
+
+function alertWarnings(alert) {
+  return (alert?.warnings || []).filter(Boolean)
+}
+
+function activeWatchlistPayload() {
+  return watchlist.value
+    .filter((item) => item.point_code === pointCode.value)
+    .map((item) => ({
+      product_oid: item.product_oid,
+      product_name: item.product_name,
+    }))
+}
+
 async function refreshWatchlistSignals() {
   watchlistSignalsError.value = ''
   if (!watchlist.value.length) {
@@ -142,21 +172,39 @@ async function refreshWatchlistSignals() {
   }
   loadingWatchlistSignals.value = true
   try {
-    const activeItems = watchlist.value.filter((item) => item.point_code === pointCode.value)
     watchlistSignals.value = await fetchWatchlistSignals({
       pointCode: pointCode.value,
       date: 'latest',
       lookbackDays: 30,
-      items: activeItems.map((item) => ({
-        product_oid: item.product_oid,
-        product_name: item.product_name,
-      })),
+      items: activeWatchlistPayload(),
     })
   } catch (err) {
     watchlistSignals.value = null
     watchlistSignalsError.value = '暫時未能更新關注商品訊號，請稍後再試。'
   } finally {
     loadingWatchlistSignals.value = false
+  }
+}
+
+async function refreshWatchlistAlerts() {
+  watchlistAlertsError.value = ''
+  if (!watchlist.value.length) {
+    watchlistAlerts.value = { alerts: [], summary: { alerts_count: 0 }, warnings: [] }
+    return
+  }
+  loadingWatchlistAlerts.value = true
+  try {
+    watchlistAlerts.value = await fetchWatchlistAlerts({
+      pointCode: pointCode.value,
+      date: 'latest',
+      lookbackDays: 30,
+      items: activeWatchlistPayload(),
+    })
+  } catch (err) {
+    watchlistAlerts.value = null
+    watchlistAlertsError.value = '暫時未能檢查關注提醒，請稍後再試。'
+  } finally {
+    loadingWatchlistAlerts.value = false
   }
 }
 
@@ -299,6 +347,8 @@ watch(pointCode, () => {
   loadHistoricalSignals()
   watchlistSignals.value = null
   watchlistSignalsError.value = ''
+  watchlistAlerts.value = null
+  watchlistAlertsError.value = ''
 })
 
 onMounted(async () => {
@@ -454,72 +504,161 @@ onMounted(async () => {
           </div>
 
           <div class="mt-5 border-t border-slate-100 pt-4">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 class="text-base font-semibold text-slate-950">我的關注商品</h2>
-              <button
-                type="button"
-                class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
-                :disabled="loadingWatchlistSignals || !watchlist.length"
-                @click="refreshWatchlistSignals"
-              >
-                {{ loadingWatchlistSignals ? '更新中...' : '更新關注商品訊號' }}
-              </button>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 class="text-base font-semibold text-slate-950">我的關注</h2>
+                <p class="mt-1 text-xs leading-5 text-slate-500">收藏商品、價格狀態與提醒候選集中在這裡。</p>
+              </div>
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  :disabled="loadingWatchlistSignals || !watchlist.length"
+                  @click="refreshWatchlistSignals"
+                >
+                  {{ loadingWatchlistSignals ? '更新中...' : '更新關注商品訊號' }}
+                </button>
+                <button
+                  type="button"
+                  class="h-9 rounded-md bg-slate-950 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+                  :disabled="loadingWatchlistAlerts || !watchlist.length"
+                  @click="refreshWatchlistAlerts"
+                >
+                  {{ loadingWatchlistAlerts ? '檢查中...' : '檢查關注提醒' }}
+                </button>
+              </div>
             </div>
+
             <p v-if="watchlistSignalsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               {{ watchlistSignalsError }}
+            </p>
+            <p v-if="watchlistAlertsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              {{ watchlistAlertsError }}
             </p>
             <p v-if="!watchlist.length" class="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
               尚未關注商品。你可以在「先選商品規格」中加入關注。
             </p>
-            <div v-else class="mt-3 grid gap-3">
-              <article
-                v-for="item in watchlist"
-                :key="watchlistKey(item.product_oid, item.point_code)"
-                class="rounded-lg border border-slate-200 bg-white p-3"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <h3 class="text-sm font-medium leading-5 text-slate-950">{{ item.product_name }}</h3>
-                    <p class="mt-1 text-xs text-slate-500">
-                      {{ item.package_quantity || 'N/A' }} · {{ item.category_name || 'N/A' }}
-                    </p>
-                    <p class="mt-1 text-xs text-slate-500">{{ item.point_name || item.point_code }}</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                    @click="removeFromWatchlist(item.product_oid, item.point_code)"
-                  >
-                    移除
-                  </button>
-                </div>
 
-                <div v-if="item.point_code !== pointCode" class="mt-3 rounded-md bg-slate-50 p-2 text-xs text-slate-600">
-                  此商品屬於 {{ item.point_name || item.point_code }}，切換到該採集點後可更新訊號。
+            <div v-else class="mt-4 grid gap-4">
+              <section class="rounded-xl border border-slate-200 bg-white p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <h3 class="text-sm font-semibold text-slate-950">關注商品</h3>
+                  <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{{ watchlist.length }} 件</span>
                 </div>
-                <div v-else class="mt-3 rounded-md bg-slate-50 p-2 text-sm">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span
-                      class="rounded-full px-2 py-0.5 text-xs font-medium"
-                      :class="watchlistSignalFor(item)?.signal_type === 'unusual_high' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-50 text-emerald-700'"
-                    >
-                      {{ watchlistStatusLabel(watchlistSignalFor(item)) }}
-                    </span>
-                  </div>
-                  <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div>當前最低價：{{ money(watchlistSignalFor(item)?.current_min_price_mop) }}</div>
-                    <div>超市：{{ watchlistSignalFor(item)?.current_store_name || 'N/A' }}</div>
-                    <div>歷史最低價：{{ money(watchlistSignalFor(item)?.historical_min_price_mop) }}</div>
-                    <div>近期平均價：{{ money(watchlistSignalFor(item)?.historical_avg_price_mop) }}</div>
-                  </div>
-                  <p v-if="watchlistSignalFor(item)?.reason" class="mt-2 text-xs leading-5 text-slate-700">
-                    {{ watchlistSignalFor(item).reason }}
-                  </p>
-                  <ul v-if="watchlistSignalFor(item)?.warnings?.length" class="mt-2 list-disc pl-4 text-xs text-amber-700">
-                    <li v-for="warning in watchlistSignalFor(item).warnings" :key="warning">{{ warning }}</li>
-                  </ul>
+                <div class="mt-3 grid gap-2">
+                  <article
+                    v-for="item in watchlist"
+                    :key="watchlistKey(item.product_oid, item.point_code)"
+                    class="rounded-lg border border-slate-100 bg-slate-50 p-3"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <h4 class="text-sm font-medium leading-5 text-slate-950">{{ item.product_name }}</h4>
+                        <p class="mt-1 text-xs text-slate-500">{{ item.package_quantity || 'N/A' }} ? {{ item.category_name || 'N/A' }}</p>
+                        <p class="mt-1 text-xs text-slate-500">採集點：{{ item.point_name || item.point_code }}</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        @click="removeFromWatchlist(item.product_oid, item.point_code)"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  </article>
                 </div>
-              </article>
+              </section>
+
+              <section class="rounded-xl border border-slate-200 bg-white p-3">
+                <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 class="text-sm font-semibold text-slate-950">關注商品價格狀態</h3>
+                  <p class="text-xs text-slate-500">由「更新關注商品訊號」取得</p>
+                </div>
+                <div class="mt-3 grid gap-2">
+                  <article
+                    v-for="item in watchlist"
+                    :key="`status-${watchlistKey(item.product_oid, item.point_code)}`"
+                    class="rounded-lg bg-slate-50 p-3"
+                  >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 class="text-sm font-medium leading-5 text-slate-950">{{ item.product_name }}</h4>
+                        <p class="mt-1 text-xs text-slate-500">{{ item.point_name || item.point_code }}</p>
+                      </div>
+                      <span
+                        class="w-fit rounded-full px-2 py-0.5 text-xs font-medium"
+                        :class="watchlistSignalFor(item)?.signal_type === 'unusual_high' ? 'bg-amber-100 text-amber-800' : watchlistSignalFor(item)?.signal_type ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-600'"
+                      >
+                        {{ watchlistStatusLabel(watchlistSignalFor(item)) }}
+                      </span>
+                    </div>
+                    <div v-if="item.point_code !== pointCode" class="mt-3 rounded-md bg-white p-2 text-xs text-slate-600">
+                      此商品屬於 {{ item.point_name || item.point_code }}，只會在切換到該採集點後更新訊號。
+                    </div>
+                    <div v-else>
+                      <div class="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                        <div class="rounded-md bg-white p-2">當前最低價：{{ money(watchlistSignalFor(item)?.current_min_price_mop) }}</div>
+                        <div class="rounded-md bg-white p-2">超市：{{ watchlistSignalFor(item)?.current_store_name || 'N/A' }}</div>
+                        <div class="rounded-md bg-white p-2">歷史最低價：{{ money(watchlistSignalFor(item)?.historical_min_price_mop) }}</div>
+                        <div class="rounded-md bg-white p-2">近期平均價：{{ money(watchlistSignalFor(item)?.historical_avg_price_mop) }}</div>
+                      </div>
+                      <p v-if="watchlistSignalFor(item)?.reason" class="mt-2 text-xs leading-5 text-slate-700">
+                        {{ watchlistSignalFor(item).reason }}
+                      </p>
+                      <p v-if="watchlistSignalFor(item)?.warnings?.length" class="mt-2 text-xs text-amber-700">
+                        注意：{{ watchlistSignalFor(item).warnings.join('\uff1b') }}
+                      </p>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="rounded-xl border border-slate-200 bg-white p-3">
+                <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 class="text-sm font-semibold text-slate-950">關注商品提醒</h3>
+                  <p class="text-xs text-slate-500">由「檢查關注提醒」取得</p>
+                </div>
+                <div v-if="watchlistAlertItems.length" class="mt-3 grid gap-3">
+                  <article
+                    v-for="alert in watchlistAlertItems"
+                    :key="`alert-${alert.alert_type}-${alert.product_oid}`"
+                    class="rounded-lg border p-3"
+                    :class="alert.severity === 'high' ? 'border-red-200 bg-red-50/60' : alert.severity === 'medium' ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60'"
+                  >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div class="text-sm font-semibold text-slate-950">{{ alert.title }}</div>
+                        <div class="mt-1 text-sm text-slate-800">{{ alert.product_name }}</div>
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
+                          {{ alertTypeLabel(alert.alert_type) }}
+                        </span>
+                        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700">
+                          嚴重度：{{ severityLabel(alert.severity) }}
+                        </span>
+                        <span
+                          class="rounded-full px-2 py-0.5 text-xs font-medium"
+                          :class="alert.should_notify ? 'bg-emerald-600 text-white' : 'bg-white text-slate-700'"
+                        >
+                          {{ alert.should_notify ? '建議提醒' : '僅供參考' }}
+                        </span>
+                      </div>
+                    </div>
+                    <p class="mt-2 text-sm leading-5 text-slate-700">{{ alert.message }}</p>
+                    <div class="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                      <div class="rounded-md bg-white/70 p-2">當前最低價：{{ money(alert.current_min_price_mop) }}</div>
+                      <div class="rounded-md bg-white/70 p-2">超市：{{ alert.current_store_name || 'N/A' }}</div>
+                    </div>
+                    <p v-if="alertWarnings(alert).length" class="mt-2 text-xs text-amber-700">
+                      注意：{{ alertWarnings(alert).join('\uff1b') }}
+                    </p>
+                  </article>
+                </div>
+                <p v-else class="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+                  目前未有需要提醒的關注商品。
+                </p>
+              </section>
             </div>
           </div>
         </aside>

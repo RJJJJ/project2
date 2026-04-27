@@ -21,6 +21,15 @@ Show that the deployed MVP can turn a local shopping intent into practical Macau
 4. Confirm the API docs page loads and exposes FastAPI/OpenAPI endpoints.
 5. Keep this script and `docs/screenshots/README.md` available for capture notes.
 
+## v0.6 展示流程
+
+1. 選地區。
+2. 直接生成方案。
+3. 點「先選商品規格」。
+4. 在候選商品卡加入關注。
+5. 在「我的關注」更新關注訊號。
+6. 檢查關注提醒。
+
 ## 5-minute walkthrough
 
 ### 1. Introduce the problem
@@ -34,7 +43,7 @@ Show that the deployed MVP can turn a local shopping intent into practical Macau
 - Enter or reuse a representative basket, for example:
 
 ```text
-?????????????????
+我想買一包米、兩支洗頭水、一包紙巾
 ```
 
 ### 3. Explain the output

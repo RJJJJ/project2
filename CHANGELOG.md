@@ -2,6 +2,20 @@
 
 All notable MVP presentation-package changes are tracked here.
 
+## v0.6 - MVP Productization Batch
+
+### Added
+
+- Watchlist alerts: `/api/watchlist/alerts` generates alert candidates from watched products.
+- Historical signals: historical low, below-average, and unusual-high price signal surface.
+- Weekly demo data update report coverage for historical signals and alert smoke tests.
+- Deployment smoke check: `scripts/smoke_check_deployment.py` validates deployed backend API endpoints.
+- Productized watchlist panel grouping watched items, price status, and alert candidates.
+
+### Notes
+
+- v0.6 still avoids LLM, login, database, real push delivery, crawler changes, optimizer changes, and Telegram Bot changes.
+
 ## 2026-04-27
 
 ### Added

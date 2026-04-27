@@ -21,6 +21,7 @@ from services.collection_point_resolver import PointResolutionError, load_collec
 from services.historical_price_signal_analyzer import analyze_historical_price_signals
 from services.price_signal_analyzer import analyze_point_signals
 from services.product_candidate_search import search_product_candidates
+from services.watchlist_alert_service import generate_watchlist_alerts
 from services.watchlist_signal_service import analyze_watchlist_items
 
 
@@ -72,6 +73,18 @@ def _watchlist_signals_result(request: WatchlistSignalsRequest) -> dict[str, Any
     processed_root = get_processed_root()
     point = resolve_point_from_request(point_code=request.point_code)
     return analyze_watchlist_items(
+        str(point["point_code"]),
+        [item.model_dump() if hasattr(item, "model_dump") else item.dict() for item in request.items],
+        date=request.date,
+        lookback_days=request.lookback_days,
+        processed_root=processed_root,
+    )
+
+
+def _watchlist_alerts_result(request: WatchlistSignalsRequest) -> dict[str, Any]:
+    processed_root = get_processed_root()
+    point = resolve_point_from_request(point_code=request.point_code)
+    return generate_watchlist_alerts(
         str(point["point_code"]),
         [item.model_dump() if hasattr(item, "model_dump") else item.dict() for item in request.items],
         date=request.date,
@@ -162,6 +175,11 @@ def get_historical_signals(
 @router.post("/watchlist/signals")
 def post_watchlist_signals(request: WatchlistSignalsRequest) -> dict[str, Any]:
     return _watchlist_signals_result(request)
+
+
+@router.post("/watchlist/alerts")
+def post_watchlist_alerts(request: WatchlistSignalsRequest) -> dict[str, Any]:
+    return _watchlist_alerts_result(request)
 
 
 @router.get("/signals/{point_code}/text", response_model=TextResponse)

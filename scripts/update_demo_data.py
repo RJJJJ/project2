@@ -23,6 +23,7 @@ from services.category_presets import resolve_categories
 from services.consumer_price_api import ConsumerPriceApi
 from services.historical_price_signal_analyzer import analyze_historical_price_signals
 from services.price_signal_analyzer import analyze_point_signals
+from services.watchlist_alert_service import generate_watchlist_alerts
 
 
 DEFAULT_MAX_POINTS = 5
@@ -152,6 +153,7 @@ def run_basket_smoke(
         "ok": False,
         "basket_total": None,
         "recommended_plan_type": None,
+        "sample_watchlist_item": None,
         "warnings": [],
         "errors": [],
     }
@@ -169,6 +171,17 @@ def run_basket_smoke(
             result["warnings"].append("basket pipeline returned no recommended_plan_type")
         if total is None:
             result["warnings"].append("basket pipeline returned no estimated_total_mop")
+        for plan in plans:
+            for item in _safe_list(plan.get("items")):
+                product_oid = item.get("product_oid")
+                if product_oid is not None:
+                    result["sample_watchlist_item"] = {
+                        "product_oid": product_oid,
+                        "product_name": item.get("product_name") or item.get("keyword"),
+                    }
+                    break
+            if result["sample_watchlist_item"]:
+                break
         result["ok"] = bool(plans and recommended_type is not None and total is not None)
     except Exception as exc:  # noqa: BLE001 - update report should collect point failures.
         result["errors"].append(f"basket pipeline failed: {exc}")
@@ -214,6 +227,38 @@ def run_historical_signals_smoke(
     return result
 
 
+def run_watchlist_alerts_smoke(
+    date_value: str,
+    point_code: str,
+    processed_root: Path,
+    sample_item: dict[str, Any] | None,
+    watchlist_alert_generator: Callable[..., dict[str, Any]] = generate_watchlist_alerts,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {"ok": False, "alerts_count": 0, "notify_count": 0, "warnings": [], "errors": []}
+    if not sample_item or sample_item.get("product_oid") is None:
+        result["ok"] = True
+        result["warnings"].append("basket smoke returned no product_oid for watchlist alert smoke")
+        return result
+    try:
+        alerts = watchlist_alert_generator(
+            point_code=point_code,
+            items=[sample_item],
+            date=date_value,
+            lookback_days=30,
+            processed_root=processed_root,
+        )
+        summary = alerts.get("summary") or {}
+        result["ok"] = True
+        result["alerts_count"] = int(summary.get("alerts_count") or len(_safe_list(alerts.get("alerts"))))
+        result["notify_count"] = int(summary.get("notify_count") or 0)
+        result["warnings"].extend(str(item) for item in _safe_list(alerts.get("warnings")))
+        for item_warning in _safe_list(alerts.get("item_warnings")):
+            result["warnings"].extend(str(item) for item in _safe_list(item_warning.get("warnings")))
+    except Exception as exc:  # noqa: BLE001 - update report should collect point failures.
+        result["errors"].append(f"watchlist alert generator failed: {exc}")
+    return result
+
+
 def summarize_point_result(
     point: dict[str, Any],
     fetch_summary: dict[str, Any] | None,
@@ -221,8 +266,10 @@ def summarize_point_result(
     basket: dict[str, Any],
     signals: dict[str, Any],
     historical_signals: dict[str, Any] | None = None,
+    watchlist_alerts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     historical_signals = historical_signals or {}
+    watchlist_alerts = watchlist_alerts or {}
     failed_requests = _safe_list((fetch_summary or {}).get("failed_requests"))
     errors = []
     warnings = []
@@ -230,10 +277,13 @@ def summarize_point_result(
     errors.extend(str(item) for item in basket.get("errors", []))
     errors.extend(str(item) for item in signals.get("errors", []))
     errors.extend(str(item) for item in historical_signals.get("errors", []))
+    errors.extend(str(item) for item in watchlist_alerts.get("errors", []))
     warnings.extend(str(item) for item in validation.get("warnings", []))
     warnings.extend(str(item) for item in basket.get("warnings", []))
     historical_warnings = [str(item) for item in historical_signals.get("warnings", [])]
+    alert_warnings = [str(item) for item in watchlist_alerts.get("warnings", [])]
     warnings.extend(historical_warnings)
+    warnings.extend(alert_warnings)
 
     return {
         "point_code": point.get("point_code"),
@@ -256,6 +306,10 @@ def summarize_point_result(
         "historical_signals_ok": bool(historical_signals.get("ok")),
         "historical_signals_count": historical_signals.get("signals_count", 0),
         "historical_warnings": historical_warnings,
+        "watchlist_alerts_ok": bool(watchlist_alerts.get("ok")),
+        "watchlist_alerts_count": watchlist_alerts.get("alerts_count", 0),
+        "watchlist_alerts_notify_count": watchlist_alerts.get("notify_count", 0),
+        "watchlist_alert_warnings": alert_warnings,
         "warnings": warnings,
         "errors": errors,
     }
@@ -278,6 +332,7 @@ def build_update_report(
         or not point.get("basket_ok")
         or not point.get("signals_ok")
         or point.get("historical_signals_ok") is False
+        or point.get("watchlist_alerts_ok") is False
     ]
     return {
         "generated_at": generated_at or _iso_now(),
@@ -292,6 +347,7 @@ def build_update_report(
             "points_basket_ok": sum(1 for point in points if point.get("basket_ok")),
             "points_signals_ok": sum(1 for point in points if point.get("signals_ok")),
             "points_historical_signals_ok": sum(1 for point in points if point.get("historical_signals_ok")),
+            "points_watchlist_alerts_ok": sum(1 for point in points if point.get("watchlist_alerts_ok")),
             "failed_points": failed_points,
         },
     }
@@ -311,8 +367,8 @@ def build_markdown_report(report: dict[str, Any]) -> str:
         "",
         "## Point Results",
         "",
-        "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | historical_ok | historical_count | errors |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| point_code | name | district | supermarkets | products | price_records | fetch_ok | validation_ok | basket_ok | signals_ok | historical_ok | historical_count | alerts_ok | alerts_count | notify_count | errors |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for point in report.get("points") or []:
         lines.append(
@@ -331,6 +387,9 @@ def build_markdown_report(report: dict[str, Any]) -> str:
                     _markdown_value(point.get("signals_ok")),
                     _markdown_value(point.get("historical_signals_ok")),
                     _markdown_value(point.get("historical_signals_count")),
+                    _markdown_value(point.get("watchlist_alerts_ok")),
+                    _markdown_value(point.get("watchlist_alerts_count")),
+                    _markdown_value(point.get("watchlist_alerts_notify_count")),
                     _markdown_value(point.get("errors")),
                 ]
             )
@@ -419,6 +478,7 @@ def collect_update_results(
     basket_builder: Callable[[str, str, str, Path], dict[str, Any]] = build_result,
     signals_analyzer: Callable[[str, str, Path], dict[str, Any]] = analyze_point_signals,
     historical_signals_analyzer: Callable[..., dict[str, Any]] = analyze_historical_price_signals,
+    watchlist_alert_generator: Callable[..., dict[str, Any]] = generate_watchlist_alerts,
 ) -> dict[str, Any]:
     selected_points = load_points(options.config_path)[: options.max_points]
     point_codes = [str(point["point_code"]) for point in selected_points]
@@ -457,7 +517,16 @@ def collect_update_results(
             options.processed_root,
             historical_signals_analyzer=historical_signals_analyzer,
         )
-        point_results.append(summarize_point_result(point, fetch_summary, validation, basket, signals, historical_signals))
+        watchlist_alerts = run_watchlist_alerts_smoke(
+            run_date,
+            point_code,
+            options.processed_root,
+            basket.get("sample_watchlist_item"),
+            watchlist_alert_generator=watchlist_alert_generator,
+        )
+        point_results.append(
+            summarize_point_result(point, fetch_summary, validation, basket, signals, historical_signals, watchlist_alerts)
+        )
 
     return build_update_report(
         points=point_results,

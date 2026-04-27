@@ -1,32 +1,20 @@
 # MVP Roadmap
 
-## Current MVP
+## Completed in MVP / v0.6
 
-- Public web demo deployed on Vercel.
-- Public FastAPI backend deployed on Render.
-- Demo data flow based on processed JSONL price data.
-- Basket parsing and shopping recommendation flow suitable for stakeholder review.
+- Product Candidate UX：支援「先選商品規格」、常見規格推薦與不指定 product_oid fallback。
+- Historical Signals：根據 processed historical data 產生歷史抵買訊號。
+- Watchlist v0：Web Demo 使用 localStorage 收藏商品。
+- Alert Rules v0：根據關注商品與 price signals 生成提醒候選，不做真正推送。
+- Weekly Demo Data Update：demo data update workflow 與 update report smoke test。
+- Deployment Demo：Vercel web demo、Render API docs 與部署後 smoke check。
 
-## Near-term improvements
+## Next
 
-### Product experience
-
-- Improve empty, loading, and error states in the web demo.
-- Add clearer explanation of recommendation logic in the UI.
-- Add demo-friendly examples for common Macau shopping baskets.
-- Capture and publish screenshots listed in `docs/screenshots/README.md`.
-
-### Data quality
-
-- Document data freshness and source update cadence.
-- Add visible timestamps for the dataset used by each recommendation.
-- Expand validation around missing prices, aliases, and unavailable items.
-
-### API maturity
-
-- Stabilize request/response examples in the API docs.
-- Add explicit health and readiness checks for deployment monitoring.
-- Add versioning notes for public API changes.
+- Notification Delivery v0：把 alert candidates 接到 Telegram / email / web notification 等真正推送渠道。
+- 15 collection points：擴展 demo data 與驗收至 15 個採集點。
+- Server-side watchlist / user account：支援跨裝置同步、登入與 server-side watchlist。
+- Mobile app prototype：針對手機購物場景設計更輕量的 prototype。
 
 ## Later milestones
 
@@ -34,11 +22,4 @@
 - More collection-point and neighborhood scenarios.
 - Route-aware or distance-aware recommendation improvements.
 - User feedback capture for incorrect matches or recommendations.
-- Production observability for latency, errors, and data refresh status.
-
-## Out of scope for MVP
-
-- Real checkout or inventory reservation.
-- Guaranteed live shelf availability.
-- Full-map route optimization.
-- Payment, accounts, or personalized shopping history.
+- Database-backed historical price storage when MVP JSONL limits are reached.

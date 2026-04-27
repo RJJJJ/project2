@@ -86,3 +86,33 @@ git push origin main
 - 使用 `--sync-demo-data` 時，script 只會把最新 processed date 的前 5 個 point 複製到 `demo_data/processed/{date}/{point_code}`；不會複製 raw data。
 - 請勿 commit `data/raw/` 或 `data/processed/`。
 - commit `demo_data/processed` 並 push 後，Render 會按 repo 更新重新部署，線上 demo fallback data 也會更新。
+
+## v0.6 CORS / Vercel / Render Checklist
+
+Render environment variable:
+
+```text
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://project2-three-rho.vercel.app
+```
+
+Vercel environment variable:
+
+```text
+VITE_API_BASE_URL=https://macau-shopping-api.onrender.com
+```
+
+## 部署後驗收
+
+1. Render `/api/health` 回 200。
+2. Render `/api/products/candidates?keyword=米&point_code=p001&date=latest&limit=5` 回 200。
+3. 執行 smoke check：
+
+```bash
+python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.onrender.com
+```
+
+4. Vercel web manual checks：
+   - 地區載入
+   - 先選商品規格
+   - 加入關注
+   - 檢查關注提醒
