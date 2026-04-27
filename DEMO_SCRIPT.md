@@ -30,6 +30,15 @@ Show that the deployed MVP can turn a local shopping intent into practical Macau
 5. 在「我的關注」更新關注訊號。
 6. 檢查關注提醒。
 
+## v0.7 展示流程
+
+1. 展示「如何使用」與價格只供參考提示。
+2. 點「快速測試」按鈕填入 demo basket。
+3. 點「先選商品規格」，說明「系統推薦」與「快速最低價匹配」的差異。
+4. 加入一個候選商品到 watchlist。
+5. 更新關注商品訊號並檢查 alert rules。
+6. 填寫「試用回饋」、保存、查看已保存回饋並下載 JSON。
+
 ## 5-minute walkthrough
 
 ### 1. Introduce the problem

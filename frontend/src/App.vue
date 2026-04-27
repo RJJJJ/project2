@@ -4,6 +4,12 @@ import { askBasket, fetchHistoricalSignals, fetchPoints, fetchSignals, fetchProd
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 const WATCHLIST_STORAGE_KEY = 'macau-shopping-watchlist-v1'
+const FEEDBACK_STORAGE_KEY = 'macau-shopping-feedback-v1'
+const demoExamples = [
+  { label: '基本日用品', text: '我想買一包米、兩支洗頭水、一包紙巾' },
+  { label: '清潔用品', text: '我想買洗衣液、消毒濕紙巾、廁紙' },
+  { label: '飲食基本', text: '我想買一包米、一支食油、一盒牛奶' },
+]
 
 const points = ref([])
 const pointCode = ref('p001')
@@ -12,6 +18,7 @@ const basketResult = ref(null)
 const signals = ref(null)
 const historicalSignals = ref(null)
 const error = ref('')
+const errorDiagnostic = ref(null)
 const loadingPoints = ref(false)
 const loadingBasket = ref(false)
 const loadingSignals = ref(false)
@@ -27,6 +34,16 @@ const watchlistSignalsError = ref('')
 const watchlistAlerts = ref(null)
 const loadingWatchlistAlerts = ref(false)
 const watchlistAlertsError = ref('')
+const historicalSignalsDiagnostic = ref(null)
+const watchlistSignalsDiagnostic = ref(null)
+const watchlistAlertsDiagnostic = ref(null)
+const feedbackForm = ref({
+  rating: '有用',
+  confusing_part: '',
+  wanted_feature: '',
+})
+const savedFeedback = ref([])
+const showSavedFeedback = ref(false)
 
 const planLabels = {
   cheapest_by_item: '單品最低價',
@@ -91,6 +108,59 @@ function loadWatchlistFromStorage() {
 
 function saveWatchlistToStorage() {
   window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist.value))
+}
+
+function loadFeedbackFromStorage() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]')
+    savedFeedback.value = Array.isArray(parsed) ? parsed : []
+  } catch (err) {
+    savedFeedback.value = []
+  }
+}
+
+function saveFeedbackToStorage() {
+  window.localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(savedFeedback.value))
+}
+
+function applyDemoExample(exampleText) {
+  shoppingText.value = exampleText
+}
+
+function saveFeedback() {
+  savedFeedback.value = [
+    ...savedFeedback.value,
+    {
+      rating: feedbackForm.value.rating,
+      confusing_part: feedbackForm.value.confusing_part.trim(),
+      wanted_feature: feedbackForm.value.wanted_feature.trim(),
+      current_point_code: pointCode.value,
+      current_query: shoppingText.value,
+      created_at: new Date().toISOString(),
+    },
+  ]
+  saveFeedbackToStorage()
+  feedbackForm.value = {
+    rating: '有用',
+    confusing_part: '',
+    wanted_feature: '',
+  }
+  showSavedFeedback.value = true
+}
+
+function downloadFeedbackJson() {
+  const blob = new Blob([JSON.stringify(savedFeedback.value, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `macau-shopping-feedback-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function clearFeedback() {
+  savedFeedback.value = []
+  saveFeedbackToStorage()
 }
 
 function watchlistKey(productOid, itemPointCode = pointCode.value) {
@@ -166,6 +236,7 @@ function activeWatchlistPayload() {
 
 async function refreshWatchlistSignals() {
   watchlistSignalsError.value = ''
+  watchlistSignalsDiagnostic.value = null
   if (!watchlist.value.length) {
     watchlistSignals.value = { items: [], warnings: [] }
     return
@@ -181,6 +252,7 @@ async function refreshWatchlistSignals() {
   } catch (err) {
     watchlistSignals.value = null
     watchlistSignalsError.value = '暫時未能更新關注商品訊號，請稍後再試。'
+    watchlistSignalsDiagnostic.value = buildDiagnostic(err, '/api/watchlist/signals')
   } finally {
     loadingWatchlistSignals.value = false
   }
@@ -188,6 +260,7 @@ async function refreshWatchlistSignals() {
 
 async function refreshWatchlistAlerts() {
   watchlistAlertsError.value = ''
+  watchlistAlertsDiagnostic.value = null
   if (!watchlist.value.length) {
     watchlistAlerts.value = { alerts: [], summary: { alerts_count: 0 }, warnings: [] }
     return
@@ -203,18 +276,42 @@ async function refreshWatchlistAlerts() {
   } catch (err) {
     watchlistAlerts.value = null
     watchlistAlertsError.value = '暫時未能檢查關注提醒，請稍後再試。'
+    watchlistAlertsDiagnostic.value = buildDiagnostic(err, '/api/watchlist/alerts')
   } finally {
     loadingWatchlistAlerts.value = false
   }
 }
 
+function buildDiagnostic(err, fallbackEndpoint = '') {
+  const message = err?.message || '未知錯誤'
+  const status = err?.status ?? null
+  const endpoint = err?.endpoint || fallbackEndpoint || 'N/A'
+  const suggestions = []
+  if (message.includes('Failed to fetch') || err?.isNetworkError) {
+    suggestions.push('檢查後端是否已啟動，或部署環境的 CORS 設定是否允許目前網域。')
+  }
+  if (status === 404) {
+    suggestions.push('檢查 API route 是否已部署到目前後端。')
+  }
+  if (message.toLowerCase().includes('processed') || message.includes('data')) {
+    suggestions.push('檢查 demo_data / processed data 是否已準備。')
+  }
+  if (!suggestions.length) {
+    suggestions.push('稍後重試；如果問題持續，請把技術詳情交給維護者。')
+  }
+  return { endpoint, status, message, suggestions }
+}
+
 function readableError(err) {
+  if (err?.status === 404) return '目前後端版本可能尚未提供這個功能，請稍後再試。'
+  if (err?.isNetworkError || err?.message?.includes('Failed to fetch')) return '暫時連不到後端服務，請稍後再試。'
   return '後端服務未啟動或資料尚未準備。'
 }
 
 async function loadPoints() {
   loadingPoints.value = true
   error.value = ''
+  errorDiagnostic.value = null
   try {
     points.value = await fetchPoints()
     if (!points.value.some((point) => point.point_code === pointCode.value) && points.value.length) {
@@ -222,6 +319,7 @@ async function loadPoints() {
     }
   } catch (err) {
     error.value = readableError(err)
+    errorDiagnostic.value = buildDiagnostic(err, '/api/points')
   } finally {
     loadingPoints.value = false
   }
@@ -231,11 +329,13 @@ async function loadSignals() {
   if (!pointCode.value) return
   loadingSignals.value = true
   error.value = ''
+  errorDiagnostic.value = null
   try {
     signals.value = await fetchSignals(pointCode.value, 5)
   } catch (err) {
     signals.value = null
     error.value = readableError(err)
+    errorDiagnostic.value = buildDiagnostic(err, `/api/signals/${pointCode.value}`)
   } finally {
     loadingSignals.value = false
   }
@@ -245,6 +345,7 @@ async function loadHistoricalSignals() {
   if (!pointCode.value) return
   loadingHistoricalSignals.value = true
   historicalSignalsError.value = ''
+  historicalSignalsDiagnostic.value = null
   try {
     historicalSignals.value = await fetchHistoricalSignals({
       pointCode: pointCode.value,
@@ -255,6 +356,7 @@ async function loadHistoricalSignals() {
   } catch (err) {
     historicalSignals.value = null
     historicalSignalsError.value = '暫時未能載入歷史抵買訊號，請稍後再試。'
+    historicalSignalsDiagnostic.value = buildDiagnostic(err, `/api/historical-signals/${pointCode.value}`)
   } finally {
     loadingHistoricalSignals.value = false
   }
@@ -263,6 +365,7 @@ async function loadHistoricalSignals() {
 async function generatePlan() {
   loadingBasket.value = true
   error.value = ''
+  errorDiagnostic.value = null
   try {
     basketResult.value = await askBasket({
       text: shoppingText.value,
@@ -272,6 +375,7 @@ async function generatePlan() {
   } catch (err) {
     basketResult.value = null
     error.value = readableError(err)
+    errorDiagnostic.value = buildDiagnostic(err, '/api/basket/ask')
   } finally {
     loadingBasket.value = false
   }
@@ -280,6 +384,7 @@ async function generatePlan() {
 async function findCandidates() {
   loadingCandidates.value = true
   error.value = ''
+  errorDiagnostic.value = null
   basketResult.value = null
   candidateGroups.value = []
   selectedCandidateOids.value = {}
@@ -319,6 +424,7 @@ async function findCandidates() {
   } catch (err) {
     candidateGroups.value = []
     error.value = readableError(err)
+    errorDiagnostic.value = buildDiagnostic(err, '/api/products/candidates')
   } finally {
     loadingCandidates.value = false
   }
@@ -327,6 +433,7 @@ async function findCandidates() {
 async function generatePlanWithSelectedProducts() {
   loadingBasket.value = true
   error.value = ''
+  errorDiagnostic.value = null
   try {
     basketResult.value = await askBasket({
       text: shoppingText.value,
@@ -337,6 +444,7 @@ async function generatePlanWithSelectedProducts() {
   } catch (err) {
     basketResult.value = null
     error.value = readableError(err)
+    errorDiagnostic.value = buildDiagnostic(err, '/api/basket/ask')
   } finally {
     loadingBasket.value = false
   }
@@ -347,12 +455,15 @@ watch(pointCode, () => {
   loadHistoricalSignals()
   watchlistSignals.value = null
   watchlistSignalsError.value = ''
+  watchlistSignalsDiagnostic.value = null
   watchlistAlerts.value = null
   watchlistAlertsError.value = ''
+  watchlistAlertsDiagnostic.value = null
 })
 
 onMounted(async () => {
   loadWatchlistFromStorage()
+  loadFeedbackFromStorage()
   await loadPoints()
   await Promise.all([loadSignals(), loadHistoricalSignals()])
 })
@@ -366,6 +477,18 @@ onMounted(async () => {
         <p class="text-sm text-slate-600">本地採購方案與本區價差訊號</p>
         <p class="text-sm text-slate-500">資料範圍：所選採集點附近約 500 米。價格只供參考，以店內標示為準。</p>
       </header>
+
+      <details class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" open>
+        <summary class="cursor-pointer text-base font-semibold text-slate-950">如何使用</summary>
+        <ol class="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
+          <li class="rounded-md bg-slate-50 p-3">1. 選擇你附近的地區。</li>
+          <li class="rounded-md bg-slate-50 p-3">2. 輸入購物清單，例如「我想買一包米、兩支洗頭水、一包紙巾」。</li>
+          <li class="rounded-md bg-slate-50 p-3">3. 直接生成方案，或先選商品規格再生成方案。</li>
+        </ol>
+        <p class="mt-3 rounded-md bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+          目前資料來自澳門消委會公開物價資料，價格只供參考，以店內標示為準。
+        </p>
+      </details>
 
       <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -398,6 +521,21 @@ onMounted(async () => {
             />
           </label>
 
+          <div class="mt-3">
+            <div class="text-xs font-medium text-slate-500">快速測試</div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button
+                v-for="example in demoExamples"
+                :key="example.label"
+                type="button"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                @click="applyDemoExample(example.text)"
+              >
+                {{ example.label }}
+              </button>
+            </div>
+          </div>
+
           <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
@@ -415,7 +553,18 @@ onMounted(async () => {
             >
               {{ loadingCandidates ? '查找中...' : '先選商品規格' }}
             </button>
-            <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
+          </div>
+          <div v-if="error" class="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
+            <p>{{ error }}</p>
+            <details v-if="errorDiagnostic" class="mt-2 text-xs text-red-900">
+              <summary class="cursor-pointer font-medium">技術詳情</summary>
+              <dl class="mt-2 grid gap-1">
+                <div>API endpoint：{{ errorDiagnostic.endpoint }}</div>
+                <div>HTTP status：{{ errorDiagnostic.status ?? 'N/A' }}</div>
+                <div>Error message：{{ errorDiagnostic.message }}</div>
+                <div>建議：{{ errorDiagnostic.suggestions.join('；') }}</div>
+              </dl>
+            </details>
           </div>
         </div>
 
@@ -455,6 +604,15 @@ onMounted(async () => {
             <p v-if="loadingHistoricalSignals" class="mt-3 text-sm text-slate-500">載入歷史訊號中...</p>
             <p v-else-if="historicalSignalsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               {{ historicalSignalsError }}
+              <details v-if="historicalSignalsDiagnostic" class="mt-2 text-xs text-amber-900">
+                <summary class="cursor-pointer font-medium">技術詳情</summary>
+                <div class="mt-2 grid gap-1">
+                  <div>API endpoint：{{ historicalSignalsDiagnostic.endpoint }}</div>
+                  <div>HTTP status：{{ historicalSignalsDiagnostic.status ?? 'N/A' }}</div>
+                  <div>Error message：{{ historicalSignalsDiagnostic.message }}</div>
+                  <div>建議：{{ historicalSignalsDiagnostic.suggestions.join('；') }}</div>
+                </div>
+              </details>
             </p>
             <div v-else-if="historicalSignalItems.length" class="mt-3 grid gap-3">
               <article
@@ -531,9 +689,27 @@ onMounted(async () => {
 
             <p v-if="watchlistSignalsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               {{ watchlistSignalsError }}
+              <details v-if="watchlistSignalsDiagnostic" class="mt-2 text-xs text-amber-900">
+                <summary class="cursor-pointer font-medium">技術詳情</summary>
+                <div class="mt-2 grid gap-1">
+                  <div>API endpoint：{{ watchlistSignalsDiagnostic.endpoint }}</div>
+                  <div>HTTP status：{{ watchlistSignalsDiagnostic.status ?? 'N/A' }}</div>
+                  <div>Error message：{{ watchlistSignalsDiagnostic.message }}</div>
+                  <div>建議：{{ watchlistSignalsDiagnostic.suggestions.join('；') }}</div>
+                </div>
+              </details>
             </p>
             <p v-if="watchlistAlertsError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               {{ watchlistAlertsError }}
+              <details v-if="watchlistAlertsDiagnostic" class="mt-2 text-xs text-amber-900">
+                <summary class="cursor-pointer font-medium">技術詳情</summary>
+                <div class="mt-2 grid gap-1">
+                  <div>API endpoint：{{ watchlistAlertsDiagnostic.endpoint }}</div>
+                  <div>HTTP status：{{ watchlistAlertsDiagnostic.status ?? 'N/A' }}</div>
+                  <div>Error message：{{ watchlistAlertsDiagnostic.message }}</div>
+                  <div>建議：{{ watchlistAlertsDiagnostic.suggestions.join('；') }}</div>
+                </div>
+              </details>
             </p>
             <p v-if="!watchlist.length" class="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
               尚未關注商品。你可以在「先選商品規格」中加入關注。
@@ -841,6 +1017,90 @@ onMounted(async () => {
               <div class="text-sm font-medium text-slate-950">{{ planLabel(plan.plan_type) }}</div>
               <div class="mt-1 text-sm text-slate-600">{{ money(plan.estimated_total_mop) }}</div>
               <div class="mt-1 text-xs text-slate-500">超市數量：{{ plan.store_count ?? 0 }}</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-slate-950">試用回饋</h2>
+            <p class="mt-1 text-sm text-slate-500">回饋只會保存在這個瀏覽器的 localStorage，可下載 JSON 後交給維護者。</p>
+          </div>
+          <span class="w-fit rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            已保存 {{ savedFeedback.length }} 筆
+          </span>
+        </div>
+
+        <div class="mt-4 grid gap-3">
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-slate-700">這個結果有用嗎？</span>
+            <select
+              v-model="feedbackForm.rating"
+              class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950"
+            >
+              <option>有用</option>
+              <option>一般</option>
+              <option>沒用</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-slate-700">你看不懂哪一部分？</span>
+            <textarea
+              v-model="feedbackForm.confusing_part"
+              rows="3"
+              class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-slate-700"
+            />
+          </label>
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-slate-700">你希望新增什麼商品或功能？</span>
+            <textarea
+              v-model="feedbackForm.wanted_feature"
+              rows="3"
+              class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-slate-700"
+            />
+          </label>
+        </div>
+
+        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+          <button type="button" class="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white" @click="saveFeedback">
+            保存回饋
+          </button>
+          <button
+            type="button"
+            class="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800"
+            @click="showSavedFeedback = !showSavedFeedback"
+          >
+            查看已保存回饋
+          </button>
+          <button
+            type="button"
+            class="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+            :disabled="!savedFeedback.length"
+            @click="downloadFeedbackJson"
+          >
+            下載回饋 JSON
+          </button>
+          <button
+            type="button"
+            class="h-10 rounded-md border border-red-200 bg-white px-4 text-sm font-medium text-red-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            :disabled="!savedFeedback.length"
+            @click="clearFeedback"
+          >
+            清空回饋
+          </button>
+        </div>
+
+        <div v-if="showSavedFeedback" class="mt-4 rounded-md bg-slate-50 p-3">
+          <p v-if="!savedFeedback.length" class="text-sm text-slate-500">暫未保存回饋。</p>
+          <div v-else class="grid gap-2">
+            <article v-for="item in savedFeedback" :key="item.created_at" class="rounded-md bg-white p-3 text-sm">
+              <div class="font-medium text-slate-950">{{ item.rating }} · {{ item.current_point_code }}</div>
+              <div class="mt-1 text-xs text-slate-500">{{ item.created_at }}</div>
+              <p class="mt-2 text-slate-700">看不懂：{{ item.confusing_part || 'N/A' }}</p>
+              <p class="mt-1 text-slate-700">想新增：{{ item.wanted_feature || 'N/A' }}</p>
+              <p class="mt-1 text-xs text-slate-500">查詢：{{ item.current_query }}</p>
             </article>
           </div>
         </div>
