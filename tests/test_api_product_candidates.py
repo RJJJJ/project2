@@ -38,7 +38,16 @@ def test_get_product_candidates(monkeypatch) -> None:
                 "max_price_mop": 18.0,
                 "store_count": 2,
                 "sample_supermarkets": ["Store A"],
-                "score": 1002,
+                "score": 170.65,
+                "is_recommended": True,
+                "recommendation_reason": "??????????????",
+                "ranking_factors": {
+                    "match_score": 120,
+                    "coverage_score": 10,
+                    "package_preference_score": 40,
+                    "price_score": 0.65,
+                    "final_score": 170.65,
+                },
             }
         ],
     )
@@ -50,6 +59,8 @@ def test_get_product_candidates(monkeypatch) -> None:
     assert response.json()["point_code"] == "p001"
     assert response.json()["keyword"] == "?"
     assert response.json()["candidates"][0]["product_oid"] == 101
+    assert response.json()["candidates"][0]["is_recommended"] is True
+    assert "final_score" in response.json()["candidates"][0]["ranking_factors"]
 
 
 def test_get_product_candidates_empty(monkeypatch) -> None:

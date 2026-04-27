@@ -7,6 +7,10 @@
 - Web Demo: https://project2-three-rho.vercel.app
 - API Docs: https://macau-shopping-api.onrender.com/docs
 
+## 商品候選確認
+
+Web Demo 支援「先選商品規格」：系統會推薦常見規格（例如米類 5公斤 / 10公斤家庭包裝），用戶仍可自行改選或選擇不指定。
+
 ## 目前功能
 
 - FastAPI Backend：提供健康檢查、採集點、購物籃方案、價差訊號 API

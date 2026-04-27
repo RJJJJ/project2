@@ -1,4 +1,3 @@
-﻿
 from __future__ import annotations
 
 import json
@@ -28,10 +27,10 @@ def make_fixture(tmp_path: Path) -> Path:
     write_jsonl(
         point_dir / "category_1_prices.jsonl",
         [
-            {"point_code": "p001", "product_oid": 101, "product_name": "\u5bcc\u58eb\u73cd\u73e0\u7c73", "quantity": "1??", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 1, "price_mop": 13.5},
-            {"point_code": "p001", "product_oid": 101, "product_name": "\u5bcc\u58eb\u73cd\u73e0\u7c73", "quantity": "1??", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 2, "price_mop": 18.0},
-            {"point_code": "p001", "product_oid": 102, "product_name": "???????", "quantity": "5??", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 3, "price_mop": 68.0},
-            {"point_code": "p001", "product_oid": 103, "product_name": "\u5bcc\u58eb\u73cd\u73e0\u7c73", "quantity": "1??", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 3, "price_mop": None},
+            {"point_code": "p001", "product_oid": 101, "product_name": "\u5bcc\u58eb\u73cd\u73e0\u7c73", "quantity": "1\u516c\u65a4", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 1, "price_mop": 13.5},
+            {"point_code": "p001", "product_oid": 101, "product_name": "\u5bcc\u58eb\u73cd\u73e0\u7c73", "quantity": "1\u516c\u65a4", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 2, "price_mop": 18.0},
+            {"point_code": "p001", "product_oid": 102, "product_name": "\u91d1\u5154\u738b\u9802\u7d1a\u7cef\u7c73", "quantity": "5\u516c\u65a4", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 3, "price_mop": 68.0},
+            {"point_code": "p001", "product_oid": 103, "product_name": "\u7121\u50f9\u683c\u767d\u7c73", "quantity": "1\u516c\u65a4", "category_id": 1, "category_name": "\u7c73\u985e", "supermarket_oid": 3, "price_mop": None},
         ],
     )
     return tmp_path
@@ -42,22 +41,36 @@ def test_keyword_returns_candidates_and_aggregates_by_product_oid(tmp_path: Path
 
     candidates = search_product_candidates("2026-04-25", "p001", "\u7c73", processed_root=processed_root)
 
-    first = candidates[0]
-    assert first["product_oid"] == 101
-    assert first["matched_alias"] == "\u7c73"
-    assert first["min_price_mop"] == 13.5
-    assert first["max_price_mop"] == 18.0
-    assert first["store_count"] == 2
-    assert first["sample_supermarkets"] == ["Store A", "Store B"]
+    by_oid = {candidate["product_oid"]: candidate for candidate in candidates}
+    aggregated = by_oid[101]
+    assert aggregated["matched_alias"] == "\u7c73"
+    assert aggregated["min_price_mop"] == 13.5
+    assert aggregated["max_price_mop"] == 18.0
+    assert aggregated["store_count"] == 2
+    assert aggregated["sample_supermarkets"] == ["Store A", "Store B"]
     assert {candidate["product_oid"] for candidate in candidates} == {101, 102}
 
 
-def test_limit_is_applied(tmp_path: Path) -> None:
+def test_candidate_keeps_old_fields_and_adds_ranking_fields(tmp_path: Path) -> None:
+    processed_root = make_fixture(tmp_path)
+
+    candidate = search_product_candidates("2026-04-25", "p001", "\u7c73", processed_root=processed_root)[0]
+
+    for field in ("product_oid", "product_name", "package_quantity", "min_price_mop", "max_price_mop", "store_count"):
+        assert field in candidate
+    assert "is_recommended" in candidate
+    assert "recommendation_reason" in candidate
+    assert "ranking_factors" in candidate
+    assert "final_score" in candidate["ranking_factors"]
+
+
+def test_limit_is_applied_after_ranking(tmp_path: Path) -> None:
     processed_root = make_fixture(tmp_path)
 
     candidates = search_product_candidates("2026-04-25", "p001", "\u7c73", limit=1, processed_root=processed_root)
 
     assert len(candidates) == 1
+    assert candidates[0]["is_recommended"] is True
 
 
 def test_no_candidates_returns_empty_list(tmp_path: Path) -> None:

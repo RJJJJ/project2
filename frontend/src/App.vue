@@ -40,7 +40,7 @@ const selectedProducts = computed(() =>
       keyword: group.keyword,
       product_oid: selectedCandidateOids.value[group.keyword],
     }))
-    .filter((item) => item.product_oid !== null && item.product_oid !== undefined),
+    .filter((item) => item.product_oid !== null && item.product_oid !== undefined && item.product_oid !== ''),
 )
 
 function planLabel(planType) {
@@ -135,8 +135,9 @@ async function findCandidates() {
     )
     const defaults = {}
     groups.forEach((group) => {
-      if (group.candidates.length) {
-        defaults[group.keyword] = group.candidates[0].product_oid
+      const recommended = group.candidates.find((candidate) => candidate.is_recommended) || group.candidates[0]
+      if (recommended) {
+        defaults[group.keyword] = recommended.product_oid
       }
     })
     candidateGroups.value = groups
@@ -284,7 +285,7 @@ onMounted(async () => {
           <button
             type="button"
             class="h-11 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-            :disabled="loadingBasket || !selectedProducts.length"
+            :disabled="loadingBasket"
             @click="generatePlanWithSelectedProducts"
           >
             {{ loadingBasket ? '生成中...' : '使用所選商品生成方案' }}
@@ -303,10 +304,25 @@ onMounted(async () => {
             </div>
 
             <div v-if="group.candidates.length" class="mt-3 grid gap-2">
+              <label class="flex cursor-pointer gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3 hover:bg-slate-100">
+                <input
+                  v-model="selectedCandidateOids[group.keyword]"
+                  type="radio"
+                  class="mt-1"
+                  :name="`candidate-${group.keyword}`"
+                  value=""
+                />
+                <div>
+                  <div class="font-medium text-slate-950">不指定，讓系統推薦</div>
+                  <div class="mt-1 text-sm text-slate-600">不傳入 product_oid，使用原有快速匹配與最低價方案。</div>
+                </div>
+              </label>
+
               <label
                 v-for="candidate in group.candidates"
                 :key="`${group.keyword}-${candidate.product_oid}`"
-                class="flex cursor-pointer gap-3 rounded-md border border-slate-200 p-3 hover:bg-slate-50"
+                class="flex cursor-pointer gap-3 rounded-md border p-3 hover:bg-slate-50"
+                :class="candidate.is_recommended ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'"
               >
                 <input
                   v-model="selectedCandidateOids[group.keyword]"
@@ -316,7 +332,18 @@ onMounted(async () => {
                   :value="candidate.product_oid"
                 />
                 <div class="min-w-0 flex-1">
-                  <div class="font-medium text-slate-950">{{ candidate.product_name }}</div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div class="font-medium text-slate-950">{{ candidate.product_name }}</div>
+                    <span
+                      v-if="candidate.is_recommended"
+                      class="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white"
+                    >
+                      系統推薦
+                    </span>
+                  </div>
+                  <div v-if="candidate.is_recommended && candidate.recommendation_reason" class="mt-1 text-sm text-emerald-800">
+                    {{ candidate.recommendation_reason }}
+                  </div>
                   <div class="mt-1 grid gap-1 text-sm text-slate-600 sm:grid-cols-4">
                     <div>規格：{{ candidate.package_quantity || 'N/A' }}</div>
                     <div>類別：{{ candidate.category_name || 'N/A' }}</div>
@@ -334,7 +361,7 @@ onMounted(async () => {
             </div>
 
             <p v-else class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-              找不到「{{ group.keyword }}」的候選商品，可改用「直接生成方案」或調整關鍵字。
+              暫時找不到候選商品，將由系統用原有方式嘗試匹配。
             </p>
           </article>
         </div>
