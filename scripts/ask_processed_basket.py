@@ -24,9 +24,20 @@ def build_result(
     point_code: str,
     text: str,
     processed_root: Path,
+    selected_products: list[dict[str, Any]] | None = None,
     convenience_threshold: float = 5.0,
 ) -> dict[str, Any]:
     items = parse_shopping_text(text)
+    if selected_products:
+        selected_by_keyword = {
+            str(item.get("keyword")): item.get("product_oid")
+            for item in selected_products
+            if item.get("keyword") and item.get("product_oid") is not None
+        }
+        for item in items:
+            selected_product_oid = selected_by_keyword.get(str(item.get("keyword")))
+            if selected_product_oid is not None:
+                item["selected_product_oid"] = selected_product_oid
     result = optimize_basket(date, point_code, items, processed_root)
     result["parsed_items"] = items
     result.update(recommend_plan(result["plans"], convenience_threshold))

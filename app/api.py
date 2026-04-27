@@ -19,6 +19,7 @@ from scripts.generate_point_signals import format_signals_text
 from services.basket_text_formatter import format_basket_text
 from services.collection_point_resolver import PointResolutionError, load_collection_points, resolve_point_code
 from services.price_signal_analyzer import analyze_point_signals
+from services.product_candidate_search import search_product_candidates
 
 
 router = APIRouter(prefix="/api")
@@ -39,7 +40,8 @@ def _basket_result(request: BasketAskRequest) -> tuple[dict[str, Any], dict[str,
     point = resolve_point_from_request(request.point_code, request.point_name, request.district)
     point_code = str(point["point_code"])
     ensure_processed_data_exists(date, point_code, processed_root)
-    result = build_result(date, point_code, request.text, processed_root)
+    selected_products = [item.dict() for item in request.selected_products or []]
+    result = build_result(date, point_code, request.text, processed_root, selected_products=selected_products)
     return result, point
 
 
@@ -78,6 +80,32 @@ def search_points(q: str = Query(..., min_length=1)) -> dict[str, Any]:
 def ask_basket(request: BasketAskRequest) -> dict[str, Any]:
     result, _point = _basket_result(request)
     return result
+
+
+@router.get("/products/candidates")
+def product_candidates(
+    keyword: str = Query(..., min_length=1),
+    point_code: str = Query(..., min_length=1),
+    date: str = "latest",
+    limit: int = Query(10, ge=1, le=50),
+) -> dict[str, Any]:
+    processed_root = get_processed_root()
+    selected_date = resolve_date(date, processed_root)
+    point = resolve_point_from_request(point_code=point_code)
+    selected_point_code = str(point["point_code"])
+    ensure_processed_data_exists(selected_date, selected_point_code, processed_root)
+    return {
+        "date": selected_date,
+        "point_code": selected_point_code,
+        "keyword": keyword,
+        "candidates": search_product_candidates(
+            selected_date,
+            selected_point_code,
+            keyword,
+            limit=limit,
+            processed_root=processed_root,
+        ),
+    }
 
 
 @router.post("/basket/ask_text", response_model=TextResponse)

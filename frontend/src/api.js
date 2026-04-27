@@ -24,15 +24,26 @@ export function fetchPoints() {
   return request('/api/points')
 }
 
-export function askBasket({ text, pointCode }) {
+export function askBasket({ text, pointCode, selectedProducts = null }) {
   return request('/api/basket/ask', {
     method: 'POST',
     body: JSON.stringify({
       text,
       point_code: pointCode,
       date: 'latest',
+      ...(selectedProducts ? { selected_products: selectedProducts } : {}),
     }),
   })
+}
+
+export function fetchProductCandidates({ keyword, pointCode, limit = 8 }) {
+  const params = new URLSearchParams({
+    keyword,
+    point_code: pointCode,
+    date: 'latest',
+    limit: String(limit),
+  })
+  return request(`/api/products/candidates?${params.toString()}`)
 }
 
 export function fetchSignals(pointCode, topN = 5) {

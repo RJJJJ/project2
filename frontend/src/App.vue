@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { askBasket, fetchPoints, fetchSignals } from './api'
+import { askBasket, fetchPoints, fetchSignals, fetchProductCandidates } from './api'
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 
@@ -13,6 +13,9 @@ const error = ref('')
 const loadingPoints = ref(false)
 const loadingBasket = ref(false)
 const loadingSignals = ref(false)
+const loadingCandidates = ref(false)
+const candidateGroups = ref([])
+const selectedCandidateOids = ref({})
 
 const planLabels = {
   cheapest_by_item: '單品最低價',
@@ -31,6 +34,14 @@ const selectedPlan = computed(() => {
 const otherPlans = computed(() => basketResult.value?.plans || [])
 const signalItems = computed(() => signals.value?.largest_price_gap || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
+const selectedProducts = computed(() =>
+  candidateGroups.value
+    .map((group) => ({
+      keyword: group.keyword,
+      product_oid: selectedCandidateOids.value[group.keyword],
+    }))
+    .filter((item) => item.product_oid !== null && item.product_oid !== undefined),
+)
 
 function planLabel(planType) {
   return planLabels[planType] || '採購方案'
@@ -86,6 +97,70 @@ async function generatePlan() {
     basketResult.value = await askBasket({
       text: shoppingText.value,
       pointCode: pointCode.value,
+    })
+    await loadSignals()
+  } catch (err) {
+    basketResult.value = null
+    error.value = readableError(err)
+  } finally {
+    loadingBasket.value = false
+  }
+}
+
+async function findCandidates() {
+  loadingCandidates.value = true
+  error.value = ''
+  basketResult.value = null
+  candidateGroups.value = []
+  selectedCandidateOids.value = {}
+  try {
+    const parsedResult = await askBasket({
+      text: shoppingText.value,
+      pointCode: pointCode.value,
+    })
+    const items = parsedResult.parsed_items || []
+    const groups = await Promise.all(
+      items.map(async (item) => {
+        const response = await fetchProductCandidates({
+          keyword: item.keyword,
+          pointCode: pointCode.value,
+          limit: 8,
+        })
+        return {
+          keyword: item.keyword,
+          quantity: item.quantity,
+          candidates: response.candidates || [],
+        }
+      }),
+    )
+    const defaults = {}
+    groups.forEach((group) => {
+      if (group.candidates.length) {
+        defaults[group.keyword] = group.candidates[0].product_oid
+      }
+    })
+    candidateGroups.value = groups
+    selectedCandidateOids.value = defaults
+    if (!groups.length) {
+      error.value = '未能從輸入解析出商品，請嘗試使用米、洗頭水、紙巾等關鍵字。'
+    }
+    await loadSignals()
+  } catch (err) {
+    candidateGroups.value = []
+    error.value = readableError(err)
+  } finally {
+    loadingCandidates.value = false
+  }
+}
+
+async function generatePlanWithSelectedProducts() {
+  loadingBasket.value = true
+  error.value = ''
+  try {
+    basketResult.value = await askBasket({
+      text: shoppingText.value,
+      pointCode: pointCode.value,
+      selectedProducts: selectedProducts.value,
     })
     await loadSignals()
   } catch (err) {
@@ -153,7 +228,15 @@ onMounted(async () => {
               :disabled="loadingBasket || !shoppingText.trim() || !pointCode"
               @click="generatePlan"
             >
-              {{ loadingBasket ? '生成中...' : '生成採購方案' }}
+              {{ loadingBasket ? '生成中...' : '直接生成方案' }}
+            </button>
+            <button
+              type="button"
+              class="h-11 w-full rounded-md border border-slate-300 bg-white px-5 text-sm font-medium text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-auto"
+              :disabled="loadingCandidates || loadingBasket || !shoppingText.trim() || !pointCode"
+              @click="findCandidates"
+            >
+              {{ loadingCandidates ? '查找中...' : '先選商品規格' }}
             </button>
             <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
           </div>
@@ -192,6 +275,71 @@ onMounted(async () => {
         </aside>
       </section>
 
+      <section v-if="candidateGroups.length" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-950">確認商品 / 規格</h2>
+            <p class="mt-1 text-sm text-slate-600">先選定具體商品，再用所選 product_oid 生成採購方案。</p>
+          </div>
+          <button
+            type="button"
+            class="h-11 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            :disabled="loadingBasket || !selectedProducts.length"
+            @click="generatePlanWithSelectedProducts"
+          >
+            {{ loadingBasket ? '生成中...' : '使用所選商品生成方案' }}
+          </button>
+        </div>
+
+        <div class="mt-4 grid gap-4">
+          <article
+            v-for="group in candidateGroups"
+            :key="group.keyword"
+            class="rounded-lg border border-slate-200 p-3"
+          >
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="text-base font-semibold text-slate-950">{{ group.keyword }} x {{ group.quantity }}</h3>
+              <p class="text-sm text-slate-500">候選 {{ group.candidates.length }} 個</p>
+            </div>
+
+            <div v-if="group.candidates.length" class="mt-3 grid gap-2">
+              <label
+                v-for="candidate in group.candidates"
+                :key="`${group.keyword}-${candidate.product_oid}`"
+                class="flex cursor-pointer gap-3 rounded-md border border-slate-200 p-3 hover:bg-slate-50"
+              >
+                <input
+                  v-model="selectedCandidateOids[group.keyword]"
+                  type="radio"
+                  class="mt-1"
+                  :name="`candidate-${group.keyword}`"
+                  :value="candidate.product_oid"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-slate-950">{{ candidate.product_name }}</div>
+                  <div class="mt-1 grid gap-1 text-sm text-slate-600 sm:grid-cols-4">
+                    <div>規格：{{ candidate.package_quantity || 'N/A' }}</div>
+                    <div>類別：{{ candidate.category_name || 'N/A' }}</div>
+                    <div>價格：{{ money(candidate.min_price_mop) }} - {{ money(candidate.max_price_mop) }}</div>
+                    <div>覆蓋超市：{{ candidate.store_count }}</div>
+                  </div>
+                  <div class="mt-1 text-xs text-slate-500">
+                    product_oid: {{ candidate.product_oid }}
+                    <span v-if="candidate.sample_supermarkets?.length">
+                      · {{ candidate.sample_supermarkets.join('、') }}
+                    </span>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <p v-else class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              找不到「{{ group.keyword }}」的候選商品，可改用「直接生成方案」或調整關鍵字。
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section v-if="basketResult" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div v-if="!hasPlan" class="rounded-md bg-slate-50 p-4 text-sm text-slate-700">
           暫時找不到完整採購方案，請嘗試更換商品名稱或地區。
@@ -228,10 +376,11 @@ onMounted(async () => {
         <div v-if="hasPlan" class="mt-5">
           <h2 class="text-base font-semibold text-slate-950">每件商品</h2>
           <div class="mt-3 overflow-x-auto">
-            <table class="min-w-[760px] w-full border-collapse text-left text-sm">
+            <table class="min-w-[860px] w-full border-collapse text-left text-sm">
               <thead class="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th class="px-3 py-2 font-medium">商品名</th>
+                  <th class="px-3 py-2 font-medium">Product OID</th>
                   <th class="px-3 py-2 font-medium">規格</th>
                   <th class="px-3 py-2 font-medium">數量</th>
                   <th class="px-3 py-2 font-medium">單價</th>
@@ -242,6 +391,7 @@ onMounted(async () => {
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="item in selectedPlan?.items || []" :key="`${item.keyword}-${item.product_oid}`">
                   <td class="px-3 py-3 text-slate-950">{{ item.product_name || item.keyword }}</td>
+                  <td class="px-3 py-3 text-slate-700">{{ item.product_oid || 'N/A' }}</td>
                   <td class="px-3 py-3 text-slate-700">{{ item.package_quantity || 'N/A' }}</td>
                   <td class="px-3 py-3 text-slate-700">{{ item.requested_quantity }}</td>
                   <td class="px-3 py-3 text-slate-700">{{ money(item.unit_price_mop) }}</td>
@@ -251,6 +401,13 @@ onMounted(async () => {
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div v-if="basketResult.warnings?.length" class="mt-5 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+          <div class="font-medium">提示</div>
+          <ul class="mt-1 list-disc pl-5">
+            <li v-for="warning in basketResult.warnings" :key="warning">{{ warning }}</li>
+          </ul>
         </div>
 
         <div class="mt-5">

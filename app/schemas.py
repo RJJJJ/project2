@@ -5,6 +5,11 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class SelectedProduct(BaseModel):
+    keyword: str
+    product_oid: int
+
+
 class BasketAskRequest(BaseModel):
     text: str
     point_code: str | None = None
@@ -12,6 +17,7 @@ class BasketAskRequest(BaseModel):
     district: str | None = None
     date: str = "latest"
     format: str = "json"
+    selected_products: list[SelectedProduct] | None = None
 
 
 class BasketAskResponse(BaseModel):

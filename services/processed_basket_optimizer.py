@@ -32,12 +32,16 @@ def _priced_matches(
     point_code: str,
     keyword: str,
     processed_root: Path | None = None,
+    selected_product_oid: Any | None = None,
 ) -> list[dict[str, Any]]:
-    return [
+    matches = [
         row
         for row in get_prices_for_keyword(date, point_code, keyword, processed_root)
         if row.get("price_mop") is not None and row.get("supermarket_oid") is not None
     ]
+    if selected_product_oid is None:
+        return matches
+    return [row for row in matches if str(row.get("product_oid")) == str(selected_product_oid)]
 
 
 def _build_plan_item(keyword: str, requested_quantity: int, row: dict[str, Any]) -> dict[str, Any]:
@@ -86,13 +90,19 @@ def optimize_basket_cheapest_by_item(
     for item in items:
         keyword = str(item["keyword"])
         requested_quantity = int(item.get("quantity", 1))
-        matches = _priced_matches(date, point_code, keyword, processed_root)
+        selected_product_oid = item.get("selected_product_oid")
+        matches = _priced_matches(date, point_code, keyword, processed_root, selected_product_oid)
 
         if not matches:
-            aliases = expand_keyword(keyword)
-            warnings.append(
-                f"No price records found for keyword: {keyword}. Tried aliases: {', '.join(aliases)}"
-            )
+            if selected_product_oid is not None:
+                warnings.append(
+                    f"Selected product not found for keyword: {keyword}, product_oid: {selected_product_oid}"
+                )
+            else:
+                aliases = expand_keyword(keyword)
+                warnings.append(
+                    f"No price records found for keyword: {keyword}. Tried aliases: {', '.join(aliases)}"
+                )
             continue
 
         cheapest = min(
@@ -128,13 +138,19 @@ def _candidate_rows_by_keyword(
     warnings: list[str] = []
     for item in items:
         keyword = str(item["keyword"])
-        matches = _priced_matches(date, point_code, keyword, processed_root)
+        selected_product_oid = item.get("selected_product_oid")
+        matches = _priced_matches(date, point_code, keyword, processed_root, selected_product_oid)
         rows_by_keyword[keyword] = matches
         if not matches:
-            aliases = expand_keyword(keyword)
-            warnings.append(
-                f"No price records found for keyword: {keyword}. Tried aliases: {', '.join(aliases)}"
-            )
+            if selected_product_oid is not None:
+                warnings.append(
+                    f"Selected product not found for keyword: {keyword}, product_oid: {selected_product_oid}"
+                )
+            else:
+                aliases = expand_keyword(keyword)
+                warnings.append(
+                    f"No price records found for keyword: {keyword}. Tried aliases: {', '.join(aliases)}"
+                )
     return rows_by_keyword, warnings
 
 
