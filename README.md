@@ -2,6 +2,11 @@
 
 本專案是一個本地採購決策 MVP，用 processed JSONL 價格資料，為指定採集點附近約 500 米的購物清單產生採購方案，並提供本區價差訊號。
 
+## Live MVP
+
+- Web Demo: https://project2-three-rho.vercel.app
+- API Docs: https://macau-shopping-api.onrender.com/docs
+
 ## 目前功能
 
 - FastAPI Backend：提供健康檢查、採集點、購物籃方案、價差訊號 API
