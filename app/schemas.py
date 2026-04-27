@@ -45,3 +45,30 @@ class WatchlistSignalsRequest(BaseModel):
     lookback_days: int = 30
     items: list[WatchlistSignalItem] = Field(default_factory=list)
 
+
+class UserWatchlistItem(BaseModel):
+    product_oid: int
+    product_name: str | None = None
+    package_quantity: str | None = None
+    category_name: str | None = None
+    point_code: str
+    point_name: str | None = None
+
+
+class UserWatchlistRequest(BaseModel):
+    user_token: str
+    item: UserWatchlistItem
+
+
+class UserAlertStatus(BaseModel):
+    alert_id: str
+    product_oid: int | None = None
+    point_code: str | None = None
+    alert_type: str | None = None
+    status: str
+
+
+class UserAlertStatusRequest(BaseModel):
+    user_token: str
+    alert: UserAlertStatus
+

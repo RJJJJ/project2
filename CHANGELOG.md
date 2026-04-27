@@ -2,6 +2,20 @@
 
 All notable MVP presentation-package changes are tracked here.
 
+## v0.9 - Server-side MVP Readiness Batch
+
+### Added
+
+- Server-side watchlist JSON prototype under `data/app_state/watchlists.json`.
+- User token mode for separating prototype users without formal login.
+- Alert history API for viewed / dismissed alert status.
+- User watchlist CRUD APIs.
+- Frontend local / server mode switch with optional local watchlist sync.
+
+### Notes
+
+- v0.9 still avoids formal login, database adoption, real push delivery, crawler changes, optimizer changes, and Telegram Bot changes.
+
 ## v0.7 - User Testing Readiness Batch
 
 ### Added

@@ -4,6 +4,7 @@ __pycache__/
 venv/
 data/raw/
 data/processed/
+data/app_state/
 # Keep deploy fallback data trackable.
 !demo_data/processed/
 !demo_data/processed/**

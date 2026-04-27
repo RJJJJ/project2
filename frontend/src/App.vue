@@ -1,10 +1,25 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { askBasket, fetchHistoricalSignals, fetchPoints, fetchSignals, fetchProductCandidates, fetchWatchlistAlerts, fetchWatchlistSignals } from './api'
+import {
+  addUserWatchlistItem,
+  askBasket,
+  clearUserAlertHistory,
+  fetchHistoricalSignals,
+  fetchPoints,
+  fetchProductCandidates,
+  fetchSignals,
+  fetchUserAlertHistory,
+  fetchUserWatchlist,
+  fetchWatchlistAlerts,
+  fetchWatchlistSignals,
+  removeUserWatchlistItem,
+  setUserAlertStatus,
+} from './api'
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 const WATCHLIST_STORAGE_KEY = 'macau-shopping-watchlist-v1'
 const FEEDBACK_STORAGE_KEY = 'macau-shopping-feedback-v1'
+const USER_MODE_STORAGE_KEY = 'macau-shopping-user-mode-v1'
 const demoExamples = [
   { label: '基本日用品', text: '我想買一包米、兩支洗頭水、一包紙巾' },
   { label: '清潔用品', text: '我想買洗衣液、消毒濕紙巾、廁紙' },
@@ -34,6 +49,13 @@ const watchlistSignalsError = ref('')
 const watchlistAlerts = ref(null)
 const loadingWatchlistAlerts = ref(false)
 const watchlistAlertsError = ref('')
+const userMode = ref('local')
+const userToken = ref('demo-user-token')
+const userModeError = ref('')
+const userModeDiagnostic = ref(null)
+const loadingUserWatchlist = ref(false)
+const alertHistory = ref([])
+const loadingAlertHistory = ref(false)
 const historicalSignalsDiagnostic = ref(null)
 const watchlistSignalsDiagnostic = ref(null)
 const watchlistAlertsDiagnostic = ref(null)
@@ -110,6 +132,68 @@ function saveWatchlistToStorage() {
   window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist.value))
 }
 
+function loadUserModeFromStorage() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(USER_MODE_STORAGE_KEY) || '{}')
+    userMode.value = parsed.mode === 'server' ? 'server' : 'local'
+    userToken.value = parsed.user_token || 'demo-user-token'
+  } catch (err) {
+    userMode.value = 'local'
+    userToken.value = 'demo-user-token'
+  }
+}
+
+function saveUserModeToStorage() {
+  window.localStorage.setItem(
+    USER_MODE_STORAGE_KEY,
+    JSON.stringify({ mode: userMode.value, user_token: userToken.value || 'demo-user-token' }),
+  )
+}
+
+async function loadServerWatchlist() {
+  if (userMode.value !== 'server') return
+  userModeError.value = ''
+  userModeDiagnostic.value = null
+  loadingUserWatchlist.value = true
+  try {
+    const response = await fetchUserWatchlist(userToken.value)
+    watchlist.value = response.items || []
+  } catch (err) {
+    userModeError.value = '暫時未能載入雲端測試 watchlist；可切回本機模式繼續使用。'
+    userModeDiagnostic.value = buildDiagnostic(err, '/api/user/watchlist')
+  } finally {
+    loadingUserWatchlist.value = false
+  }
+}
+
+async function loadServerAlertHistory() {
+  if (userMode.value !== 'server') return
+  loadingAlertHistory.value = true
+  try {
+    const response = await fetchUserAlertHistory(userToken.value)
+    alertHistory.value = response.alert_history || []
+  } catch (err) {
+    userModeError.value = '暫時未能載入 alert history；可切回本機模式繼續使用。'
+    userModeDiagnostic.value = buildDiagnostic(err, '/api/user/alert-history')
+  } finally {
+    loadingAlertHistory.value = false
+  }
+}
+
+async function reloadUserDataForMode() {
+  saveUserModeToStorage()
+  if (userMode.value === 'server') {
+    await Promise.all([loadServerWatchlist(), loadServerAlertHistory()])
+  } else {
+    loadWatchlistFromStorage()
+    alertHistory.value = []
+    userModeError.value = ''
+    userModeDiagnostic.value = null
+  }
+  watchlistSignals.value = null
+  watchlistAlerts.value = null
+}
+
 function loadFeedbackFromStorage() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]')
@@ -171,29 +255,73 @@ function isWatched(candidate, itemPointCode = pointCode.value) {
   return watchlist.value.some((item) => watchlistKey(item.product_oid, item.point_code) === watchlistKey(candidate.product_oid, itemPointCode))
 }
 
-function addToWatchlist(candidate) {
+async function addToWatchlist(candidate) {
   if (!candidate?.product_oid || isWatched(candidate)) return
-  watchlist.value = [
-    ...watchlist.value,
-    {
-      product_oid: candidate.product_oid,
-      product_name: candidate.product_name,
-      package_quantity: candidate.package_quantity,
-      category_name: candidate.category_name,
-      point_code: pointCode.value,
-      point_name: selectedPoint.value?.name || pointCode.value,
-      added_at: new Date().toISOString(),
-    },
-  ]
+  const item = {
+    product_oid: candidate.product_oid,
+    product_name: candidate.product_name,
+    package_quantity: candidate.package_quantity,
+    category_name: candidate.category_name,
+    point_code: pointCode.value,
+    point_name: selectedPoint.value?.name || pointCode.value,
+    added_at: new Date().toISOString(),
+  }
+  if (userMode.value === 'server') {
+    userModeError.value = ''
+    userModeDiagnostic.value = null
+    try {
+      const response = await addUserWatchlistItem(userToken.value, item)
+      watchlist.value = response.items || []
+    } catch (err) {
+      userModeError.value = '暫時未能保存到雲端測試模式，請稍後再試或切回本機模式。'
+      userModeDiagnostic.value = buildDiagnostic(err, '/api/user/watchlist')
+    }
+    return
+  }
+  watchlist.value = [...watchlist.value, item]
   saveWatchlistToStorage()
 }
 
-function removeFromWatchlist(productOid, itemPointCode) {
+async function removeFromWatchlist(productOid, itemPointCode) {
+  if (userMode.value === 'server') {
+    userModeError.value = ''
+    userModeDiagnostic.value = null
+    try {
+      const response = await removeUserWatchlistItem(userToken.value, productOid, itemPointCode)
+      watchlist.value = response.items || []
+    } catch (err) {
+      userModeError.value = '暫時未能從雲端測試模式移除商品，請稍後再試或切回本機模式。'
+      userModeDiagnostic.value = buildDiagnostic(err, `/api/user/watchlist/${productOid}`)
+    }
+    return
+  }
   watchlist.value = watchlist.value.filter((item) => watchlistKey(item.product_oid, item.point_code) !== watchlistKey(productOid, itemPointCode))
   saveWatchlistToStorage()
   if (!watchlist.value.length) {
     watchlistSignals.value = null
     watchlistAlerts.value = null
+  }
+}
+
+async function syncLocalWatchlistToServer() {
+  const localItems = (() => {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(WATCHLIST_STORAGE_KEY) || '[]')
+      return Array.isArray(parsed) ? parsed : []
+    } catch (err) {
+      return []
+    }
+  })()
+  userModeError.value = ''
+  userModeDiagnostic.value = null
+  try {
+    for (const item of localItems) {
+      await addUserWatchlistItem(userToken.value, item)
+    }
+    await loadServerWatchlist()
+  } catch (err) {
+    userModeError.value = '同步本機關注到雲端測試模式失敗；已成功同步的項目會保留。'
+    userModeDiagnostic.value = buildDiagnostic(err, '/api/user/watchlist')
   }
 }
 
@@ -223,6 +351,42 @@ function alertTypeLabel(alertType) {
 
 function alertWarnings(alert) {
   return (alert?.warnings || []).filter(Boolean)
+}
+
+function alertId(alert) {
+  return `${pointCode.value}:${alert.product_oid}:${alert.alert_type}:${watchlistAlerts.value?.date || 'latest'}`
+}
+
+function alertHistoryStatus(alert) {
+  return alertHistory.value.find((item) => item.alert_id === alertId(alert))?.status || ''
+}
+
+async function markAlertStatus(alert, status) {
+  if (userMode.value !== 'server') return
+  try {
+    const response = await setUserAlertStatus(userToken.value, {
+      alert_id: alertId(alert),
+      product_oid: alert.product_oid,
+      point_code: pointCode.value,
+      alert_type: alert.alert_type,
+      status,
+    })
+    alertHistory.value = response.alert_history || []
+  } catch (err) {
+    userModeError.value = '暫時未能更新 alert status。'
+    userModeDiagnostic.value = buildDiagnostic(err, '/api/user/alert-history')
+  }
+}
+
+async function clearServerAlertHistory() {
+  if (userMode.value !== 'server') return
+  try {
+    const response = await clearUserAlertHistory(userToken.value)
+    alertHistory.value = response.alert_history || []
+  } catch (err) {
+    userModeError.value = '暫時未能清除 alert history。'
+    userModeDiagnostic.value = buildDiagnostic(err, '/api/user/alert-history')
+  }
 }
 
 function activeWatchlistPayload() {
@@ -273,6 +437,9 @@ async function refreshWatchlistAlerts() {
       lookbackDays: 30,
       items: activeWatchlistPayload(),
     })
+    if (userMode.value === 'server') {
+      await loadServerAlertHistory()
+    }
   } catch (err) {
     watchlistAlerts.value = null
     watchlistAlertsError.value = '暫時未能檢查關注提醒，請稍後再試。'
@@ -461,9 +628,17 @@ watch(pointCode, () => {
   watchlistAlertsDiagnostic.value = null
 })
 
+watch([userMode, userToken], () => {
+  reloadUserDataForMode()
+})
+
 onMounted(async () => {
+  loadUserModeFromStorage()
   loadWatchlistFromStorage()
   loadFeedbackFromStorage()
+  if (userMode.value === 'server') {
+    await Promise.all([loadServerWatchlist(), loadServerAlertHistory()])
+  }
   await loadPoints()
   await Promise.all([loadSignals(), loadHistoricalSignals()])
 })
@@ -489,6 +664,74 @@ onMounted(async () => {
           目前資料來自澳門消委會公開物價資料，價格只供參考，以店內標示為準。
         </p>
       </details>
+
+      <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-slate-950">資料保存模式</h2>
+            <p class="mt-1 text-sm text-slate-500">
+              本機模式使用 localStorage；雲端測試模式使用 backend JSON store 與簡單 user_token，不是正式登入。
+            </p>
+          </div>
+          <div class="grid gap-2 sm:grid-cols-[180px_minmax(0,260px)]">
+            <label class="flex flex-col gap-1 text-sm">
+              <span class="font-medium text-slate-700">模式</span>
+              <select v-model="userMode" class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm">
+                <option value="local">本機模式</option>
+                <option value="server">雲端測試模式</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm">
+              <span class="font-medium text-slate-700">user_token</span>
+              <input
+                v-model="userToken"
+                :disabled="userMode !== 'server'"
+                class="h-10 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100"
+                placeholder="demo-user-token"
+              />
+            </label>
+          </div>
+        </div>
+        <div v-if="userMode === 'server'" class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800"
+            @click="reloadUserDataForMode"
+          >
+            {{ loadingUserWatchlist ? '載入中...' : '重新載入雲端資料' }}
+          </button>
+          <button
+            type="button"
+            class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800"
+            @click="syncLocalWatchlistToServer"
+          >
+            同步本機關注到雲端測試模式
+          </button>
+          <button
+            type="button"
+            class="h-9 rounded-md border border-red-200 bg-white px-3 text-xs font-medium text-red-700"
+            :disabled="loadingAlertHistory"
+            @click="clearServerAlertHistory"
+          >
+            清除 alert history
+          </button>
+        </div>
+        <p v-if="userMode === 'server'" class="mt-2 text-xs text-slate-500">
+          目前 user_token：{{ userToken || 'N/A' }}；alert history {{ alertHistory.length }} 筆。
+        </p>
+        <div v-if="userModeError" class="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+          <p>{{ userModeError }}</p>
+          <details v-if="userModeDiagnostic" class="mt-2 text-xs text-amber-900">
+            <summary class="cursor-pointer font-medium">技術詳情</summary>
+            <div class="mt-2 grid gap-1">
+              <div>API endpoint：{{ userModeDiagnostic.endpoint }}</div>
+              <div>HTTP status：{{ userModeDiagnostic.status ?? 'N/A' }}</div>
+              <div>Error message：{{ userModeDiagnostic.message }}</div>
+              <div>建議：{{ userModeDiagnostic.suggestions.join('；') }}</div>
+            </div>
+          </details>
+        </div>
+      </section>
 
       <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -825,6 +1068,25 @@ onMounted(async () => {
                     <div class="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-600 sm:grid-cols-2">
                       <div class="rounded-md bg-white/70 p-2">當前最低價：{{ money(alert.current_min_price_mop) }}</div>
                       <div class="rounded-md bg-white/70 p-2">超市：{{ alert.current_store_name || 'N/A' }}</div>
+                    </div>
+                    <div v-if="userMode === 'server'" class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                      <span class="rounded-full bg-white px-2 py-0.5 font-medium text-slate-700">
+                        狀態：{{ alertHistoryStatus(alert) || '未標記' }}
+                      </span>
+                      <button
+                        type="button"
+                        class="rounded-full border border-slate-300 bg-white px-2 py-0.5 font-medium text-slate-700 hover:bg-slate-50"
+                        @click="markAlertStatus(alert, 'viewed')"
+                      >
+                        標記 viewed
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-full border border-slate-300 bg-white px-2 py-0.5 font-medium text-slate-700 hover:bg-slate-50"
+                        @click="markAlertStatus(alert, 'dismissed')"
+                      >
+                        標記 dismissed
+                      </button>
                     </div>
                     <p v-if="alertWarnings(alert).length" class="mt-2 text-xs text-amber-700">
                       注意：{{ alertWarnings(alert).join('\uff1b') }}

@@ -96,3 +96,41 @@ export function fetchWatchlistAlerts({ pointCode, items, date = 'latest', lookba
     }),
   })
 }
+
+export function fetchUserWatchlist(userToken) {
+  const params = new URLSearchParams({ user_token: userToken })
+  return request(`/api/user/watchlist?${params.toString()}`)
+}
+
+export function addUserWatchlistItem(userToken, item) {
+  return request('/api/user/watchlist', {
+    method: 'POST',
+    body: JSON.stringify({ user_token: userToken, item }),
+  })
+}
+
+export function removeUserWatchlistItem(userToken, productOid, pointCode) {
+  const params = new URLSearchParams({ user_token: userToken, point_code: pointCode })
+  return request(`/api/user/watchlist/${encodeURIComponent(productOid)}?${params.toString()}`, {
+    method: 'DELETE',
+  })
+}
+
+export function fetchUserAlertHistory(userToken) {
+  const params = new URLSearchParams({ user_token: userToken })
+  return request(`/api/user/alert-history?${params.toString()}`)
+}
+
+export function setUserAlertStatus(userToken, alert) {
+  return request('/api/user/alert-history', {
+    method: 'POST',
+    body: JSON.stringify({ user_token: userToken, alert }),
+  })
+}
+
+export function clearUserAlertHistory(userToken) {
+  const params = new URLSearchParams({ user_token: userToken })
+  return request(`/api/user/alert-history?${params.toString()}`, {
+    method: 'DELETE',
+  })
+}

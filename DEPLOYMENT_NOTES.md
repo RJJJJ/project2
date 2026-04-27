@@ -116,3 +116,11 @@ python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.o
    - 先選商品規格
    - 加入關注
    - 檢查關注提醒
+
+## v0.9 Server-side JSON Store Prototype
+
+- `data/app_state/` 用於本地 / backend JSON prototype state，不應 commit。
+- `data/app_state/watchlists.json` 只保存 MVP 測試用 watchlist 與 alert history。
+- Render 免費服務的檔案系統可能是 ephemeral；服務重啟或重新部署後不保證長期保存。
+- 目前 server mode 只作 prototype，不是正式用戶系統。
+- 正式版應改 PostgreSQL / Supabase / Firebase 等持久儲存，並加入 real auth。

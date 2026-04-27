@@ -5,7 +5,14 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import BasketAskRequest, BasketAskResponse, TextResponse, WatchlistSignalsRequest
+from app.schemas import (
+    BasketAskRequest,
+    BasketAskResponse,
+    TextResponse,
+    UserAlertStatusRequest,
+    UserWatchlistRequest,
+    WatchlistSignalsRequest,
+)
 from app.utils import (
     DEFAULT_POINT_CODE,
     ensure_processed_data_exists,
@@ -23,9 +30,20 @@ from services.price_signal_analyzer import analyze_point_signals
 from services.product_candidate_search import search_product_candidates
 from services.watchlist_alert_service import generate_watchlist_alerts
 from services.watchlist_signal_service import analyze_watchlist_items
+from services import user_watchlist_store
 
 
 router = APIRouter(prefix="/api")
+
+
+def _valid_user_token(user_token: str | None) -> str:
+    if not isinstance(user_token, str) or not user_token.strip():
+        raise HTTPException(status_code=400, detail="user_token is required")
+    return user_token.strip()
+
+
+def _store_error(exc: ValueError) -> HTTPException:
+    return HTTPException(status_code=400, detail=str(exc))
 
 
 def _resolve_point_search(query: str) -> dict[str, Any]:
@@ -180,6 +198,80 @@ def post_watchlist_signals(request: WatchlistSignalsRequest) -> dict[str, Any]:
 @router.post("/watchlist/alerts")
 def post_watchlist_alerts(request: WatchlistSignalsRequest) -> dict[str, Any]:
     return _watchlist_alerts_result(request)
+
+
+@router.get("/user/watchlist")
+def get_user_watchlist(user_token: str = Query(..., min_length=1)) -> dict[str, Any]:
+    token = _valid_user_token(user_token)
+    try:
+        return {"user_token": token, "items": user_watchlist_store.get_user_watchlist(token)}
+    except ValueError as exc:
+        raise _store_error(exc) from exc
+
+
+@router.post("/user/watchlist")
+def post_user_watchlist(request: UserWatchlistRequest) -> dict[str, Any]:
+    token = _valid_user_token(request.user_token)
+    try:
+        result = user_watchlist_store.add_watchlist_item(
+            token,
+            request.item.model_dump() if hasattr(request.item, "model_dump") else request.item.dict(),
+        )
+        response = {"user_token": token, "items": result["items"]}
+        if result.get("warning"):
+            response["warning"] = result["warning"]
+        return response
+    except ValueError as exc:
+        raise _store_error(exc) from exc
+
+
+@router.delete("/user/watchlist/{product_oid}")
+def delete_user_watchlist_item(
+    product_oid: int,
+    user_token: str = Query(..., min_length=1),
+    point_code: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    token = _valid_user_token(user_token)
+    try:
+        result = user_watchlist_store.remove_watchlist_item(token, product_oid, point_code)
+        response = {"user_token": token, "items": result["items"]}
+        if result.get("warning"):
+            response["warning"] = result["warning"]
+        return response
+    except ValueError as exc:
+        raise _store_error(exc) from exc
+
+
+@router.get("/user/alert-history")
+def get_user_alert_history(user_token: str = Query(..., min_length=1)) -> dict[str, Any]:
+    token = _valid_user_token(user_token)
+    try:
+        return {"user_token": token, "alert_history": user_watchlist_store.get_alert_history(token)}
+    except ValueError as exc:
+        raise _store_error(exc) from exc
+
+
+@router.post("/user/alert-history")
+def post_user_alert_history(request: UserAlertStatusRequest) -> dict[str, Any]:
+    token = _valid_user_token(request.user_token)
+    try:
+        result = user_watchlist_store.set_alert_status(
+            token,
+            request.alert.model_dump() if hasattr(request.alert, "model_dump") else request.alert.dict(),
+        )
+        return {"user_token": token, "alert_history": result["alert_history"]}
+    except ValueError as exc:
+        raise _store_error(exc) from exc
+
+
+@router.delete("/user/alert-history")
+def delete_user_alert_history(user_token: str = Query(..., min_length=1)) -> dict[str, Any]:
+    token = _valid_user_token(user_token)
+    try:
+        result = user_watchlist_store.clear_alert_history(token)
+        return {"user_token": token, "alert_history": result["alert_history"]}
+    except ValueError as exc:
+        raise _store_error(exc) from exc
 
 
 @router.get("/signals/{point_code}/text", response_model=TextResponse)
