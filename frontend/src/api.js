@@ -58,3 +58,15 @@ export function fetchHistoricalSignals({ pointCode, date = 'latest', lookbackDay
   })
   return request(`/api/historical-signals/${encodeURIComponent(pointCode)}?${params.toString()}`)
 }
+
+export function fetchWatchlistSignals({ pointCode, items, date = 'latest', lookbackDays = 30 }) {
+  return request('/api/watchlist/signals', {
+    method: 'POST',
+    body: JSON.stringify({
+      point_code: pointCode,
+      date,
+      lookback_days: lookbackDays,
+      items,
+    }),
+  })
+}

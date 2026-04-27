@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SelectedProduct(BaseModel):
@@ -32,4 +32,16 @@ class BasketAskResponse(BaseModel):
 
 class TextResponse(BaseModel):
     text: str
+
+
+class WatchlistSignalItem(BaseModel):
+    product_oid: int
+    product_name: str | None = None
+
+
+class WatchlistSignalsRequest(BaseModel):
+    point_code: str
+    date: str = "latest"
+    lookback_days: int = 30
+    items: list[WatchlistSignalItem] = Field(default_factory=list)
 
