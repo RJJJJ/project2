@@ -57,3 +57,14 @@
 - [ ] Web alert center is not real push
 - [ ] SQLite / Gemini / Agent are prototypes
 - [ ] No real auth yet
+
+## 45-point expansion readiness
+
+- [ ] 45 candidate points captured
+- [ ] names/districts reviewed
+- [ ] dst values reviewed
+- [ ] dry-run passed
+- [ ] full fetch passed
+- [ ] coverage report passed
+- [ ] SQLite import passed
+- [ ] data size reviewed before demo_data sync

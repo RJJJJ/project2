@@ -25,3 +25,8 @@ data/app_state/
 test_tmp/
 node_modules/
 frontend/node_modules/
+# Discovery raw/browser artifacts
+data/discovery/*capture*.jsonl
+data/discovery/*.har
+data/discovery/screenshots/
+data/discovery/browser-cache/
