@@ -1,8 +1,8 @@
 ﻿# Collection Points Discovery
 
-## 1. Why 45 points
+## 1. Why 46 points
 
-Project2 currently ships a stable 15-point demo dataset. For government demo / public beta, wider geographic coverage is more important than account-system work. The Consumer Council supermarket page exposes collection-centre coordinates through browser network requests when a user changes the map/search area.
+Project2 currently ships the official 46-point active config at 400m radius. The previous 15-point demo was the v1.0-prep baseline; for government demo / public beta, wider geographic coverage is more important than account-system work. The Consumer Council supermarket page exposes collection-centre coordinates through browser network requests when a user changes the map/search area.
 
 ## 2. Browser capture tool
 
@@ -27,7 +27,7 @@ If the page changes, pass a replacement URL with `--url`.
 3. Select a district / location.
 4. Click 「確定修改」.
 5. Watch the terminal for a captured `lat/lng/dst` line.
-6. Repeat until around 45 unique locations are captured.
+6. Repeat until around 46 unique locations are captured.
 7. Press Ctrl+C when done; the script prints a JSON summary.
 
 Manual mode is the primary supported workflow because page selectors may change. The script does not require manually copying Network URLs.
@@ -62,7 +62,7 @@ python scripts\build_collection_points_candidate_config.py --capture-path data\d
 
 Unnamed points are generated as `candidate_001`, `待命名地點 001`, `待確認` and must be reviewed before merging into the real config.
 
-## 6. Plan 45-point expansion
+## 6. Plan 46-point expansion
 
 ```powershell
 python scripts\plan_45_point_expansion.py --candidate-config data\discovery\collection_points_45_candidate.json --max-points 45 --categories 1-19

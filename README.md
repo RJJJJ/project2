@@ -1,6 +1,6 @@
 # 澳門採購決策 Agent MVP
 
-本專案是一個本地採購決策 MVP，用 processed JSONL 價格資料，為指定採集點附近約 500 米的購物清單產生採購方案，並提供本區價差訊號。
+本專案是一個本地採購決策 MVP，用 processed JSONL 價格資料，為指定採集點附近約 400 米的購物清單產生採購方案，並提供本區價差訊號。
 
 ## Live MVP
 
@@ -243,26 +243,26 @@ git push origin main
 
 注意：不要 commit `data/raw/` 或 `data/processed/`；只 commit `demo_data/processed` 作為線上 demo fallback data。
 
-## 15-point coverage QA
+## 46-point coverage QA
 
-Current demo coverage is based on the first 15 `config/collection_points.json` entries at 500m radius. The coverage workflow is read-only against processed JSONL and does not re-fetch crawler data.
+Current active coverage is based on the official 46 `config/collection_points.json` entries at 400m radius. The previous 15-point demo was the v1.0-prep coverage baseline. The coverage workflow is read-only against processed JSONL and does not re-fetch crawler data.
 
-Update the 15 processed points:
+Update the 46 processed points:
 
 ```bash
-python scripts/update_demo_data.py --max-points 15 --preset demo_daily
+python scripts/update_demo_data.py --max-points 46 --preset demo_daily
 ```
 
-Sync the 15-point fallback demo data when preparing deployment/demo assets:
+Sync the 46-point fallback demo data when preparing deployment/demo assets:
 
 ```bash
-python scripts/update_demo_data.py --max-points 15 --preset demo_daily --sync-demo-data
+python scripts/update_demo_data.py --max-points 46 --preset demo_daily --sync-demo-data
 ```
 
 Generate the coverage report after updating processed data:
 
 ```bash
-python scripts/generate_coverage_report.py --max-points 15
+python scripts/generate_coverage_report.py --max-points 46
 ```
 
 Outputs:
@@ -277,7 +277,7 @@ Do not commit `data/raw` or `data/processed`; use the report to inspect coverage
 Import processed JSONL into the local SQLite foundation database:
 
 ```bash
-python scripts/import_processed_to_sqlite.py --date latest --max-points 15
+python scripts/import_processed_to_sqlite.py --date latest --max-points 46
 ```
 
 Inspect the SQLite store without changing API defaults:
@@ -295,10 +295,10 @@ This is a query-service prototype for future optional providers. Existing API ro
 
 ## Weekly data refresh
 
-Consumer Council price data usually updates every Wednesday. Run the weekly refresh after the Wednesday update to fetch 15 points, validate full category coverage, import SQLite, run smoke checks, and write weekly reports:
+Consumer Council price data usually updates every Wednesday. Run the weekly refresh after the Wednesday update to fetch 46 points, validate full category coverage, import SQLite, run smoke checks, and write weekly reports:
 
 ```bash
-python scripts/weekly_data_refresh.py --max-points 15 --categories 1-19
+python scripts/weekly_data_refresh.py --max-points 46 --categories 1-19
 ```
 
 Use `--sync-demo-data` only when you intentionally want to update `demo_data/processed` fallback assets. See `docs/WEEKLY_REFRESH.md` for the manual and Windows Task Scheduler workflow.
@@ -312,7 +312,7 @@ The default backend provider remains `jsonl`. To opt into the SQLite prototype f
 ```powershell
 $env:PROJECT2_DATA_PROVIDER="sqlite"
 $env:PROJECT2_SQLITE_DB_PATH="data/app_state/project2_dev.sqlite3"
-python scripts/import_processed_to_sqlite.py --date latest --max-points 15
+python scripts/import_processed_to_sqlite.py --date latest --max-points 46
 python scripts/smoke_check_sqlite_provider.py
 ```
 
