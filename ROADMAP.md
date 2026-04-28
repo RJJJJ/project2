@@ -34,3 +34,33 @@
 - Next: 45 collection points.
 - Next: 100-500 米 radius support.
 - Next: Persistent DB.
+
+## v1.0-prep release view
+
+### Done
+
+- 15 points.
+- Simple Mode.
+- Weekly manual refresh workflow.
+- SQLite prototype.
+- Optional provider.
+- Grounded answer prototype.
+
+### Next
+
+- Final demo stabilization.
+- 1 real non-technical user test.
+- Production smoke check.
+- Optional grounded answer frontend integration.
+
+### Later
+
+- Scheduled automation / GitHub Actions / Render Cron.
+- PostgreSQL / Supabase.
+- Real auth.
+- Web Push.
+- Mobile app.
+- WeChat.
+- 45 points.
+- Radius support.
+- Full Agent.

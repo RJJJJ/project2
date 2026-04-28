@@ -362,3 +362,24 @@ Simple mode uses larger cards, clearer result wording, optional product specific
 - Watchlist and Alert Center.
 - Feedback.
 - Server/local mode and technical diagnostics.
+
+## Current v1.0-prep status
+
+- 15 collection points supported for the demo fallback dataset.
+- Simple Mode is available for senior-friendly, low-technical-wording shopping recommendations.
+- Full category processed data pipeline is available for categories 1-18 / supermarket coverage work.
+- SQLite import and query prototype is available, but SQLite is not the default provider.
+- Weekly refresh workflow is available for manual demo data/report refresh.
+- Render backend + Vercel frontend deployment are supported.
+- Gemini intent parser and Agent tools are prototype-only and not required for the final demo path.
+- Default API behavior remains JSONL-based.
+
+## Final demo validation
+
+```powershell
+python -m pytest -q -p no:cacheprovider
+python scripts/check_release_hygiene.py
+python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.onrender.com
+cd frontend
+npm.cmd run build
+```

@@ -85,3 +85,15 @@ All notable MVP presentation-package changes are tracked here.
 ### Notes
 
 - No LLM, database, crawler-core, optimizer-flow, Telegram Bot, deployment-config, radius, or 45-point expansion changes.
+
+## v1.0-prep
+
+- 15-point full category data workflow.
+- SQLite import and query prototype.
+- Product matching hardening.
+- Optional SQLite provider.
+- Gemini intent parser prototype.
+- Grounded answer formatter prototype.
+- Weekly data refresh workflow.
+- Release hygiene check.
+- Senior-friendly self-test checklist.

@@ -21,3 +21,7 @@ data/app_state/
 .codex/skills/.system/**
 !.codex/prompts/
 !.codex/prompts/**
+# Generated test/build/runtime directories
+test_tmp/
+node_modules/
+frontend/node_modules/

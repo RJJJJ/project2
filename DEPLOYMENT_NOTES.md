@@ -124,3 +124,11 @@ python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.o
 - Render 免費服務的檔案系統可能是 ephemeral；服務重啟或重新部署後不保證長期保存。
 - 目前 server mode 只作 prototype，不是正式用戶系統。
 - 正式版應改 PostgreSQL / Supabase / Firebase 等持久儲存，並加入 real auth。
+
+## v1.0-prep deployment reminders
+
+- Render backend must set `ALLOWED_ORIGINS` to the deployed Vercel origin(s).
+- Vercel frontend must set `VITE_API_BASE_URL` to the Render backend URL.
+- `data/app_state` is not persistent on free Render; treat it as prototype/runtime state only.
+- `demo_data/processed` is the committed fallback demo data used when live/generated data is unavailable.
+- The SQLite local prototype is not the production database and must not be treated as persistent production storage.

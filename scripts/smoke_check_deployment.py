@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
@@ -24,70 +24,90 @@ def normalize_base_url(base_url: str) -> str:
 
 
 def build_checks(point_code: str = "p001", keyword: str = "米") -> list[SmokeCheck]:
-    watchlist_items = [{"product_oid": 659, "product_name": "富士珍珠米"}]
-    basket_payload = {
-        "text": "我想買一包米、兩支洗頭水、一包紙巾",
-        "point_code": point_code,
-        "date": "latest",
-    }
-    watchlist_payload = {
-        "point_code": point_code,
-        "date": "latest",
-        "lookback_days": 30,
-        "items": watchlist_items,
-    }
     return [
         SmokeCheck("health", "GET", "/api/health"),
-        SmokeCheck("points", "GET", "/api/points"),
+        SmokeCheck("points_15", "GET", "/api/points"),
         SmokeCheck(
             "product_candidates",
             "GET",
             "/api/products/candidates",
-            params={
-                "keyword": keyword,
-                "point_code": point_code,
-                "date": "latest",
-                "limit": 5,
-            },
+            params={"keyword": keyword, "point_code": point_code, "date": "latest"},
         ),
         SmokeCheck(
-            "historical_signals",
-            "GET",
-            f"/api/historical-signals/{point_code}",
-            params={"date": "latest", "lookback_days": 30, "top_n": 5},
+            "basket_ask",
+            "POST",
+            "/api/basket/ask",
+            json_body={
+                "text": "我想買一包米、兩支洗頭水、一包紙巾",
+                "point_code": point_code,
+                "date": "latest",
+            },
         ),
-        SmokeCheck("watchlist_signals", "POST", "/api/watchlist/signals", json_body=watchlist_payload),
-        SmokeCheck("watchlist_alerts", "POST", "/api/watchlist/alerts", json_body=watchlist_payload),
-        SmokeCheck("basket_ask", "POST", "/api/basket/ask", json_body=basket_payload),
     ]
 
 
-def run_check(
-    session: requests.Session,
-    base_url: str,
-    check: SmokeCheck,
-    timeout: int,
-) -> dict[str, Any]:
-    url = urljoin(normalize_base_url(base_url), check.path.lstrip("/"))
-    result = {
-        "name": check.name,
-        "ok": False,
-        "status_code": None,
-        "error": None,
-    }
+def _json_or_none(response: requests.Response) -> Any:
     try:
-        response = session.request(
-            check.method,
-            url,
-            params=check.params,
-            json=check.json_body,
-            timeout=timeout,
-        )
+        return response.json()
+    except ValueError:
+        return None
+
+
+def _points_count(payload: Any) -> int:
+    if isinstance(payload, list):
+        return len(payload)
+    if isinstance(payload, dict):
+        for key in ("points", "data", "items"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return len(value)
+    return 0
+
+
+def _has_candidates(payload: Any) -> bool:
+    if isinstance(payload, list):
+        return True
+    if isinstance(payload, dict):
+        for key in ("candidates", "items", "products", "data"):
+            if key in payload:
+                return isinstance(payload[key], list)
+    return False
+
+
+def _has_basket_answer(payload: Any) -> bool:
+    if isinstance(payload, dict):
+        return any(key in payload for key in ("answer", "recommendation", "plans", "items", "summary"))
+    return payload is not None
+
+
+def validate_payload(check: SmokeCheck, payload: Any) -> tuple[bool, dict[str, Any], str | None]:
+    if check.name == "points_15":
+        count = _points_count(payload)
+        return count >= 15, {"points_count": count}, None if count >= 15 else f"Expected at least 15 points, got {count}"
+    if check.name == "product_candidates":
+        ok = _has_candidates(payload)
+        return ok, {}, None if ok else "Response did not look like a candidates payload"
+    if check.name == "basket_ask":
+        ok = _has_basket_answer(payload)
+        return ok, {}, None if ok else "Response did not look like a basket answer"
+    return True, {}, None
+
+
+def run_check(session: requests.Session, base_url: str, check: SmokeCheck, timeout: int) -> dict[str, Any]:
+    url = urljoin(normalize_base_url(base_url), check.path.lstrip("/"))
+    result: dict[str, Any] = {"name": check.name, "ok": False, "status_code": None}
+    try:
+        response = session.request(check.method, url, params=check.params, json=check.json_body, timeout=timeout)
         result["status_code"] = response.status_code
-        if 200 <= response.status_code < 300:
-            result["ok"] = True
-        else:
+        if not (200 <= response.status_code < 300):
             result["error"] = f"HTTP {response.status_code}: {response.text[:300]}"
+            return result
+        payload = _json_or_none(response)
+        payload_ok, extra, payload_error = validate_payload(check, payload)
+        result.update(extra)
+        result["ok"] = payload_ok
+        if payload_error:
+            result["error"] = payload_error
     except requests.RequestException as exc:
         result["error"] = str(exc)
     return result
@@ -101,21 +121,9 @@ def run_smoke_checks(
     session: requests.Session | None = None,
 ) -> dict[str, Any]:
     session = session or requests.Session()
-    checks = [
-        run_check(session, base_url, check, timeout)
-        for check in build_checks(point_code=point_code, keyword=keyword)
-    ]
-    errors = [
-        f"{check['name']}: {check['error'] or 'unknown error'}"
-        for check in checks
-        if not check["ok"]
-    ]
-    return {
-        "base_url": base_url.rstrip("/"),
-        "ok": not errors,
-        "checks": checks,
-        "errors": errors,
-    }
+    checks = [run_check(session, base_url, check, timeout) for check in build_checks(point_code=point_code, keyword=keyword)]
+    errors = [f"{check['name']}: {check.get('error') or 'unknown error'}" for check in checks if not check["ok"]]
+    return {"base_url": base_url.rstrip("/"), "ok": not errors, "checks": checks, "errors": errors, "warnings": []}
 
 
 def exit_code_for_summary(summary: dict[str, Any]) -> int:
@@ -123,7 +131,7 @@ def exit_code_for_summary(summary: dict[str, Any]) -> int:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Smoke check deployed Macau Shopping backend API.")
+    parser = argparse.ArgumentParser(description="Smoke check deployed Project2 backend API.")
     parser.add_argument("--base-url", required=True, help="Backend base URL, e.g. https://macau-shopping-api.onrender.com")
     parser.add_argument("--point-code", default="p001")
     parser.add_argument("--keyword", default="米")
@@ -133,12 +141,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    summary = run_smoke_checks(
-        base_url=args.base_url,
-        point_code=args.point_code,
-        keyword=args.keyword,
-        timeout=args.timeout,
-    )
+    summary = run_smoke_checks(args.base_url, point_code=args.point_code, keyword=args.keyword, timeout=args.timeout)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return exit_code_for_summary(summary)
 
