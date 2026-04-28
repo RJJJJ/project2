@@ -40,7 +40,7 @@
     "dst": 500
   },
   {
-    "point_code": "p005",
+    "point_code": "p006",
     "name": "凱泉灣",
     "district": "氹仔",
     "lat": 22.190324491470392,
@@ -48,7 +48,7 @@
     "dst": 500
   },
   {
-    "point_code": "p005",
+    "point_code": "p007",
     "name": "蓮峰",
     "district": "氹仔",
     "lat": 22.207629247637968,
@@ -56,7 +56,7 @@
     "dst": 500
   },
   {
-    "point_code": "p005",
+    "point_code": "p008",
     "name": "台山",
     "district": "氹仔",
     "lat": 22.21136661714978,
@@ -64,7 +64,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p009",
     "name": "荷蘭園",
     "district": "氹仔",
     "lat": 22.19835344733084,
@@ -72,7 +72,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p010",
     "name": "西灣",
     "district": "氹仔",
     "lat": 22.18868604210029,
@@ -80,7 +80,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p011",
     "name": "新口岸",
     "district": "氹仔",
     "lat": 22.193685502777093,
@@ -88,7 +88,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p012",
     "name": "宋玉生廣場",
     "district": "氹仔",
     "lat": 22.190057691613948,
@@ -96,7 +96,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p013",
     "name": "觀音堂",
     "district": "氹仔",
     "lat": 22.204104270837625,
@@ -104,7 +104,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p014",
     "name": "鏡湖醫院",
     "district": "氹仔",
     "lat": 22.199513435274568,
@@ -112,7 +112,7 @@
     "dst": 500
   }, 
   {
-    "point_code": "p005",
+    "point_code": "p015",
     "name": "中央公園",
     "district": "氹仔",
     "lat": 22.159336498935268,
