@@ -5,9 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from services.sqlite_store import DEFAULT_DB_PATH
+from services.product_matching_rules import (
+    candidate_text_match_score,
+    expand_keyword,
+)
 
 
-RECOMMENDATION_REASON = "\u6839\u64da\u540d\u7a31\u5339\u914d\u3001\u8986\u84cb\u8d85\u5e02\u6578\u91cf\u53ca\u6700\u4f4e\u50f9\u6392\u5e8f\u3002"
+RECOMMENDATION_REASON = "\u6839\u64da\u5546\u54c1\u540d\u7a31\u5339\u914d\u3001\u5e38\u898b\u898f\u683c\u3001\u8986\u84cb\u8d85\u5e02\u6578\u91cf\u53ca\u6700\u4f4e\u50f9\u6392\u5e8f\u3002"
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
@@ -41,27 +45,38 @@ def list_collection_points(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return [_row_to_dict(row) for row in rows]
 
 
+def _build_like_clause(terms: list[str]) -> tuple[str, list[str]]:
+    clauses: list[str] = []
+    params: list[str] = []
+    for term in terms:
+        like = f"%{term}%"
+        clauses.append("(product_name LIKE ? OR category_name LIKE ?)")
+        params.extend([like, like])
+    return " OR ".join(clauses), params
+
+
+def _product_sort_key(keyword: str, item: dict[str, Any]) -> tuple[float, int, str, str]:
+    score = candidate_text_match_score(keyword, item.get("product_name"), item.get("package_quantity"), item.get("category_name"))
+    return (-score, int(item.get("category_id") or 0), str(item.get("product_name") or ""), str(item.get("product_oid") or ""))
+
+
 def search_products(conn: sqlite3.Connection, keyword: str, limit: int = 20) -> list[dict[str, Any]]:
     normalized = keyword.strip()
     if not normalized:
         return []
-    like = f"%{normalized}%"
+    terms = expand_keyword(normalized)
+    where_clause, params = _build_like_clause(terms)
     rows = conn.execute(
-        """
+        f"""
         SELECT product_oid, product_name, package_quantity, category_id, category_name
         FROM products
-        WHERE product_name LIKE ?
-        ORDER BY
-            CASE WHEN product_name LIKE ? THEN 0 ELSE 1 END,
-            category_id ASC,
-            product_name ASC,
-            product_oid ASC
-        LIMIT ?
+        WHERE {where_clause}
         """,
-        (like, like, int(limit)),
+        params,
     ).fetchall()
-    return [_row_to_dict(row) for row in rows]
-
+    products = [_row_to_dict(row) for row in rows]
+    products.sort(key=lambda item: _product_sort_key(normalized, item))
+    return products[: max(0, int(limit))]
 
 def get_product_price_rows(conn: sqlite3.Connection, date: str, point_code: str, product_oid: str | int) -> list[dict[str, Any]]:
     rows = conn.execute(
@@ -98,9 +113,16 @@ def search_product_candidates_for_point(
     normalized = keyword.strip()
     if not normalized:
         return []
-    like = f"%{normalized}%"
+    terms = expand_keyword(normalized)
+    like_clauses: list[str] = []
+    params: list[Any] = [date, point_code]
+    for term in terms:
+        like = f"%{term}%"
+        like_clauses.append("(p.product_name LIKE ? OR p.category_name LIKE ?)")
+        params.extend([like, like])
+    where_like = " OR ".join(like_clauses)
     rows = conn.execute(
-        """
+        f"""
         SELECT
             p.product_oid,
             p.product_name,
@@ -112,32 +134,55 @@ def search_product_candidates_for_point(
             COUNT(DISTINCT pr.supermarket_oid) AS store_count
         FROM products p
         JOIN price_records pr ON pr.product_oid = p.product_oid
-        WHERE pr.date = ? AND pr.point_code = ? AND p.product_name LIKE ?
+        WHERE pr.date = ? AND pr.point_code = ? AND ({where_like})
         GROUP BY p.product_oid, p.product_name, p.package_quantity, p.category_id, p.category_name
-        ORDER BY
-            CASE WHEN p.product_name LIKE ? THEN 0 ELSE 1 END ASC,
-            store_count DESC,
-            min_price_mop ASC,
-            p.product_name ASC,
-            p.product_oid ASC
-        LIMIT ?
         """,
-        (date, point_code, like, like, int(limit)),
+        params,
     ).fetchall()
-    candidates: list[dict[str, Any]] = []
-    for index, row in enumerate(rows):
+
+    scored: list[dict[str, Any]] = []
+    for row in rows:
         item = _row_to_dict(row)
-        final_score = float(item["store_count"] or 0) * 1000 - float(item["min_price_mop"] or 0)
+        min_price = float(item["min_price_mop"] or 0)
+        store_count = int(item["store_count"] or 0)
+        match_score = candidate_text_match_score(normalized, item.get("product_name"), item.get("package_quantity"), item.get("category_name"))
+        coverage_score = float(store_count)
+        price_score = -min_price * 0.01
+        final_score = match_score * 100 + coverage_score * 5 + price_score
         item.update(
             {
-                "is_recommended": index == 0,
-                "recommendation_reason": RECOMMENDATION_REASON if index == 0 else "",
+                "match_score": round(match_score, 2),
+                "ranking_factors": {
+                    "match_score": round(match_score, 2),
+                    "coverage_score": round(coverage_score, 2),
+                    "price_score": round(price_score, 2),
+                    "final_score": round(final_score, 2),
+                },
                 "final_score": round(final_score, 2),
+                "is_recommended": False,
+                "recommendation_reason": "",
             }
         )
-        candidates.append(item)
-    return candidates
+        scored.append(item)
 
+    filtered = [item for item in scored if float(item["match_score"]) >= -5.0]
+    if filtered:
+        scored = filtered
+
+    scored.sort(
+        key=lambda item: (
+            -float(item["final_score"]),
+            -int(item["store_count"] or 0),
+            float(item["min_price_mop"] or 0),
+            str(item.get("product_name") or ""),
+            str(item.get("product_oid") or ""),
+        )
+    )
+    limited = scored[: max(0, int(limit))]
+    for index, item in enumerate(limited):
+        item["is_recommended"] = index == 0
+        item["recommendation_reason"] = RECOMMENDATION_REASON if index == 0 else ""
+    return limited
 
 def get_cheapest_offer_for_keyword(conn: sqlite3.Connection, date: str, point_code: str, keyword: str) -> dict[str, Any] | None:
     candidates = search_product_candidates_for_point(conn, date, point_code, keyword, limit=1)

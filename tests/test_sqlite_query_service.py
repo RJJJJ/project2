@@ -77,8 +77,8 @@ def test_search_products_keyword(tmp_path: Path) -> None:
 
     products = search_products(conn, RICE)
 
-    assert [item["product_oid"] for item in products] == ["rice-b", "rice-a"]
-    assert products[0]["package_quantity"] == "5\u516c\u65a4"
+    assert [item["product_oid"] for item in products] == ["rice-a", "rice-b"]
+    assert products[0]["package_quantity"] == "1\u516c\u65a4"
 
 
 def test_get_product_price_rows_sorted_by_price(tmp_path: Path) -> None:
@@ -126,3 +126,104 @@ def test_build_sqlite_simple_basket_total(tmp_path: Path) -> None:
     assert basket["items"][0]["matched"] is True
     assert basket["items"][2]["matched"] is False
     assert f"No SQLite offer found for keyword: {MISSING}" in basket["warnings"]
+
+
+def _seed_ranking_db(db_path: Path) -> sqlite3.Connection:
+    conn = connect_db(db_path)
+    init_db(conn)
+    upsert_collection_points(conn, [{"point_code": "p001", "name": "\u9ad8\u58eb\u5fb7", "district": "\u6fb3\u9580\u534a\u5cf6", "lat": 22.1, "lng": 113.5, "dst": 500}])
+    conn.executemany(
+        "INSERT INTO supermarkets(supermarket_oid, supermarket_name) VALUES (?, ?)",
+        [("s1", "A"), ("s2", "B")],
+    )
+    conn.executemany(
+        "INSERT INTO products(product_oid, product_name, package_quantity, category_id, category_name) VALUES (?, ?, ?, ?, ?)",
+        [
+            ("rice-good-a", "\u5bcc\u58eb\u73cd\u73e0\u7c73", "5\u516c\u65a4", 1, "\u7c73\u985e"),
+            ("rice-noodle", "\u5abd\u5abd\u5feb\u719f\u6e05\u6e6f\u7c73\u7c89", "55\u514b", 2, "\u7a40\u985e\u98df\u54c1"),
+            ("corn", "\u751c\u7c9f\u7c73\u7c92", "340\u514b", 4, "\u7f50\u982d\u985e"),
+            ("rice-good-b", "\u91d1\u8c61\u724c\u9802\u4e0a\u6cf0\u570b\u9999\u7c73", "8\u516c\u65a4", 1, "\u7c73\u985e"),
+            ("tissue-box", "Tempo \u76d2\u88dd\u7d19\u5dfe", "5\u76d2", 10, "\u7d19\u54c1"),
+            ("tissue-roll", "\u7dad\u9054\u5377\u7d19", "10\u5377", 10, "\u7d19\u54c1"),
+            ("wet-wipes", "\u6ef4\u9732\u842c\u7528\u6d88\u6bd2\u6fd5\u7d19\u5dfe", "80\u7247", 10, "\u7d19\u54c1"),
+            ("shampoo-en", "Head & Shoulders Shampoo", "750ml", 9, "\u500b\u4eba\u8b77\u7406"),
+            ("shampoo-zh", "\u6f58\u5a77\u6d17\u9aee\u9732", "700ml", 9, "\u500b\u4eba\u8b77\u7406"),
+            ("body-wash", "\u67d0\u54c1\u724c\u6c90\u6d74\u9732", "1L", 9, "\u500b\u4eba\u8b77\u7406"),
+            ("tie-a", "\u5e73\u50f9\u7259\u818fA", "120\u514b", 9, "\u500b\u4eba\u8b77\u7406"),
+            ("tie-b", "\u5e73\u50f9\u7259\u818fB", "120\u514b", 9, "\u500b\u4eba\u8b77\u7406"),
+        ],
+    )
+    prices = [
+        ("2026-04-28", "p001", "s1", "rice-good-a", 52.0, 1, "category_1_prices.jsonl"),
+        ("2026-04-28", "p001", "s2", "rice-good-b", 76.0, 1, "category_1_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "rice-noodle", 2.9, 2, "category_2_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "corn", 7.0, 4, "category_4_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "tissue-box", 28.0, 10, "category_10_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "tissue-roll", 32.0, 10, "category_10_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "wet-wipes", 18.0, 10, "category_10_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "shampoo-en", 49.0, 9, "category_9_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "shampoo-zh", 45.0, 9, "category_9_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "body-wash", 22.0, 9, "category_9_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "tie-b", 12.0, 9, "category_9_prices.jsonl"),
+        ("2026-04-28", "p001", "s1", "tie-a", 12.0, 9, "category_9_prices.jsonl"),
+    ]
+    conn.executemany(
+        "INSERT INTO price_records(date, point_code, supermarket_oid, product_oid, price_mop, category_id, source_file) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        prices,
+    )
+    conn.commit()
+    return conn
+
+
+def test_rice_ranking_avoids_rice_noodles_and_corn(tmp_path: Path) -> None:
+    conn = _seed_ranking_db(tmp_path / "ranking.sqlite3")
+
+    candidates = search_product_candidates_for_point(conn, "2026-04-28", "p001", RICE)
+
+    assert candidates[0]["product_oid"] in {"rice-good-a", "rice-good-b"}
+    assert candidates[0]["product_oid"] not in {"rice-noodle", "corn"}
+    assert all(item["product_oid"] != "corn" for item in candidates[:2])
+
+
+def test_tissue_ranking_avoids_disinfecting_wet_wipes_first(tmp_path: Path) -> None:
+    conn = _seed_ranking_db(tmp_path / "ranking.sqlite3")
+
+    candidates = search_product_candidates_for_point(conn, "2026-04-28", "p001", "\u7d19\u5dfe")
+
+    assert candidates[0]["product_oid"] in {"tissue-box", "tissue-roll"}
+    assert candidates[0]["product_oid"] != "wet-wipes"
+
+
+def test_shampoo_expansion_recalls_shampoo_and_hair_wash(tmp_path: Path) -> None:
+    conn = _seed_ranking_db(tmp_path / "ranking.sqlite3")
+
+    candidates = search_product_candidates_for_point(conn, "2026-04-28", "p001", SHAMPOO)
+
+    candidate_oids = [item["product_oid"] for item in candidates]
+    assert "shampoo-en" in candidate_oids
+    assert "shampoo-zh" in candidate_oids
+    assert candidates[0]["product_oid"] in {"shampoo-en", "shampoo-zh"}
+    assert candidates[0]["product_oid"] != "body-wash"
+
+
+def test_sqlite_simple_basket_matches_core_items_after_expansion(tmp_path: Path) -> None:
+    conn = _seed_ranking_db(tmp_path / "ranking.sqlite3")
+
+    basket = build_sqlite_simple_basket(
+        conn,
+        "2026-04-28",
+        "p001",
+        [{"keyword": RICE, "quantity": 1}, {"keyword": "\u7d19\u5dfe", "quantity": 1}, {"keyword": SHAMPOO, "quantity": 1}],
+    )
+
+    assert [item["matched"] for item in basket["items"]] == [True, True, True]
+    assert basket["warnings"] == []
+    assert basket["items"][0]["product_oid"] in {"rice-good-a", "rice-good-b"}
+
+
+def test_candidate_sorting_is_deterministic_for_ties(tmp_path: Path) -> None:
+    conn = _seed_ranking_db(tmp_path / "ranking.sqlite3")
+
+    candidates = search_product_candidates_for_point(conn, "2026-04-28", "p001", "\u7259\u818f")
+
+    assert [item["product_oid"] for item in candidates[:2]] == ["tie-a", "tie-b"]
