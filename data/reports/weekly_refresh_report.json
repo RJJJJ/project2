@@ -1,0 +1,1885 @@
+{
+  "generated_at": "2026-04-28T16:30:07+08:00",
+  "date": "2026-04-28",
+  "max_points": 15,
+  "categories": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "dry_run": false,
+  "sync_demo_data": false,
+  "status": "success",
+  "steps": [
+    {
+      "name": "plan",
+      "status": "success",
+      "summary": {
+        "date": "2026-04-28",
+        "max_points": 15,
+        "categories": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "sync_demo_data": false,
+        "db_path": "D:\\project2\\data\\app_state\\project2_dev.sqlite3",
+        "dry_run": false,
+        "generated_at": "2026-04-28T16:30:07+08:00"
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "fetch_full_category_points",
+      "status": "skipped",
+      "summary": {
+        "reason": "--skip-fetch"
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "full_category_coverage",
+      "status": "success",
+      "summary": {
+        "generated_at": "2026-04-28T08:30:07.669048+00:00",
+        "date": "2026-04-28",
+        "max_points": 15,
+        "summary": {
+          "date": "2026-04-28",
+          "points_total": 15,
+          "points_complete": 15,
+          "points_partial": 0,
+          "points_missing": 0,
+          "failed_points": []
+        },
+        "points": [
+          {
+            "point_code": "p001",
+            "name": "高士德",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 372
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 818
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 633
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 685
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 565
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 369
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 350
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 152
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 520
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 396
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 404
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 260
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 247
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 180
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 11
+              }
+            ]
+          },
+          {
+            "point_code": "p002",
+            "name": "義字街",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 708
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 1620
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 1213
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 1381
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 1132
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 746
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 713
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 284
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 1024
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 780
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 810
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 498
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 493
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 364
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 23
+              }
+            ]
+          },
+          {
+            "point_code": "p003",
+            "name": "關閘",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 332
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 682
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 532
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 591
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 466
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 305
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 290
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 118
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 423
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 318
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 331
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 205
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 220
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 150
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 10
+              }
+            ]
+          },
+          {
+            "point_code": "p004",
+            "name": "湖畔",
+            "district": "氹仔",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 124
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 286
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 225
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 248
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 201
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 131
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 131
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 46
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 182
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 138
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 140
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 91
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 97
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 66
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 4
+              }
+            ]
+          },
+          {
+            "point_code": "p005",
+            "name": "海洋",
+            "district": "氹仔",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 25
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 64
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 52
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 61
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 51
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 32
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 31
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 11
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 46
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 29
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 32
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 23
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 24
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 17
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 1
+              }
+            ]
+          },
+          {
+            "point_code": "p006",
+            "name": "凱泉灣",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 189
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 472
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 345
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 393
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 336
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 220
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 206
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 66
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 301
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 221
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 238
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 130
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 141
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 109
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 7
+              }
+            ]
+          },
+          {
+            "point_code": "p007",
+            "name": "蓮峰",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 484
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 1034
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 774
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 904
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 738
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 476
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 429
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 193
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 655
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 479
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 510
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 306
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 303
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 230
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 16
+              }
+            ]
+          },
+          {
+            "point_code": "p008",
+            "name": "台山",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 474
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 974
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 753
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 831
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 671
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 438
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 405
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 167
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 600
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 458
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 476
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 287
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 306
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 207
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 14
+              }
+            ]
+          },
+          {
+            "point_code": "p009",
+            "name": "荷蘭園",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 331
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 811
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 577
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 700
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 573
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 375
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 352
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 131
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 511
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 381
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 407
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 251
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 234
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 187
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 12
+              }
+            ]
+          },
+          {
+            "point_code": "p010",
+            "name": "西灣",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 254
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 618
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 460
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 511
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 435
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 285
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 273
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 91
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 388
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 298
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 309
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 177
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 191
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 141
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 9
+              }
+            ]
+          },
+          {
+            "point_code": "p011",
+            "name": "新口岸",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 163
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 361
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 280
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 298
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 246
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 164
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 166
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 59
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 222
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 185
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 178
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 112
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 120
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 81
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 5
+              }
+            ]
+          },
+          {
+            "point_code": "p012",
+            "name": "宋玉生廣場",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 139
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 294
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 229
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 249
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 201
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 134
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 132
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 54
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 185
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 146
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 145
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 90
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 95
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 66
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 4
+              }
+            ]
+          },
+          {
+            "point_code": "p013",
+            "name": "觀音堂",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 343
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 742
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 575
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 633
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 514
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 336
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 321
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 136
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 471
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 353
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 367
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 235
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 228
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 164
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 11
+              }
+            ]
+          },
+          {
+            "point_code": "p014",
+            "name": "鏡湖醫院",
+            "district": "澳門半島",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 399
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 1021
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 721
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 842
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 705
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 470
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 450
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 158
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 633
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 499
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 504
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 304
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 306
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 230
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 16
+              }
+            ]
+          },
+          {
+            "point_code": "p015",
+            "name": "中央公園",
+            "district": "氹仔",
+            "coverage_level": "complete",
+            "missing_files": [],
+            "zero_row_files": [
+              "category_13_prices.jsonl",
+              "category_14_prices.jsonl",
+              "category_16_prices.jsonl",
+              "category_17_prices.jsonl"
+            ],
+            "files": [
+              {
+                "name": "category_1_prices.jsonl",
+                "exists": true,
+                "rows": 176
+              },
+              {
+                "name": "category_2_prices.jsonl",
+                "exists": true,
+                "rows": 455
+              },
+              {
+                "name": "category_3_prices.jsonl",
+                "exists": true,
+                "rows": 340
+              },
+              {
+                "name": "category_4_prices.jsonl",
+                "exists": true,
+                "rows": 398
+              },
+              {
+                "name": "category_5_prices.jsonl",
+                "exists": true,
+                "rows": 330
+              },
+              {
+                "name": "category_6_prices.jsonl",
+                "exists": true,
+                "rows": 216
+              },
+              {
+                "name": "category_7_prices.jsonl",
+                "exists": true,
+                "rows": 225
+              },
+              {
+                "name": "category_8_prices.jsonl",
+                "exists": true,
+                "rows": 71
+              },
+              {
+                "name": "category_9_prices.jsonl",
+                "exists": true,
+                "rows": 291
+              },
+              {
+                "name": "category_10_prices.jsonl",
+                "exists": true,
+                "rows": 226
+              },
+              {
+                "name": "category_11_prices.jsonl",
+                "exists": true,
+                "rows": 234
+              },
+              {
+                "name": "category_12_prices.jsonl",
+                "exists": true,
+                "rows": 150
+              },
+              {
+                "name": "category_13_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_14_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_15_prices.jsonl",
+                "exists": true,
+                "rows": 145
+              },
+              {
+                "name": "category_16_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_17_prices.jsonl",
+                "exists": true,
+                "rows": 0
+              },
+              {
+                "name": "category_18_prices.jsonl",
+                "exists": true,
+                "rows": 112
+              },
+              {
+                "name": "supermarkets.jsonl",
+                "exists": true,
+                "rows": 7
+              }
+            ]
+          }
+        ]
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "sqlite_import",
+      "status": "success",
+      "summary": {
+        "date": "2026-04-28",
+        "db_path": "D:\\project2\\data\\app_state\\project2_dev.sqlite3",
+        "points_requested": 15,
+        "points_imported": 15,
+        "products_upserted": 600,
+        "supermarkets_upserted": 77,
+        "price_records_upserted": 74288,
+        "warnings": [],
+        "errors": []
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "sqlite_provider_smoke",
+      "status": "success",
+      "summary": {
+        "ok": true,
+        "date": "2026-04-28",
+        "point_code": "p001",
+        "rice_first": {
+          "product_oid": "894",
+          "product_name": "青靈芝香米（新花）",
+          "package_quantity": "5公斤",
+          "category_id": 1,
+          "category_name": "米類",
+          "min_price_mop": 69.0,
+          "max_price_mop": 75.0,
+          "store_count": 11,
+          "match_score": 42.0,
+          "ranking_factors": {
+            "match_score": 42.0,
+            "coverage_score": 11.0,
+            "price_score": -0.69,
+            "final_score": 4254.31
+          },
+          "final_score": 4254.31,
+          "is_recommended": true,
+          "recommendation_reason": "根據商品名稱匹配、常見規格、覆蓋超市數量及最低價排序。"
+        },
+        "tissue_first": {
+          "product_oid": "1067",
+          "product_name": "潔柔C&S盒裝紙巾150抽x5盒",
+          "package_quantity": "150抽x5盒",
+          "category_id": 15,
+          "category_name": "衛生紙",
+          "min_price_mop": 24.0,
+          "max_price_mop": 33.8,
+          "store_count": 10,
+          "match_score": 35.0,
+          "ranking_factors": {
+            "match_score": 35.0,
+            "coverage_score": 10.0,
+            "price_score": -0.24,
+            "final_score": 3549.76
+          },
+          "final_score": 3549.76,
+          "is_recommended": true,
+          "recommendation_reason": "根據商品名稱匹配、常見規格、覆蓋超市數量及最低價排序。"
+        },
+        "shampoo_first": {
+          "product_oid": "1187",
+          "product_name": "飄柔滋潤去屑洗髮露",
+          "package_quantity": "780克",
+          "category_id": 10,
+          "category_name": "個人護理用品",
+          "min_price_mop": 54.5,
+          "max_price_mop": 55.9,
+          "store_count": 9,
+          "match_score": 16.0,
+          "ranking_factors": {
+            "match_score": 16.0,
+            "coverage_score": 9.0,
+            "price_score": -0.55,
+            "final_score": 1644.45
+          },
+          "final_score": 1644.45,
+          "is_recommended": true,
+          "recommendation_reason": "根據商品名稱匹配、常見規格、覆蓋超市數量及最低價排序。"
+        },
+        "basket": {
+          "date": "2026-04-28",
+          "point_code": "p001",
+          "items": [
+            {
+              "keyword": "米",
+              "quantity": 1,
+              "matched": true,
+              "product_oid": "894",
+              "product_name": "青靈芝香米（新花）",
+              "package_quantity": "5公斤",
+              "supermarket_oid": "52",
+              "supermarket_name": "世紀豪庭 新苗超市",
+              "unit_price_mop": 69.0,
+              "subtotal_mop": 69.0
+            },
+            {
+              "keyword": "洗頭水",
+              "quantity": 2,
+              "matched": true,
+              "product_oid": "1187",
+              "product_name": "飄柔滋潤去屑洗髮露",
+              "package_quantity": "780克",
+              "supermarket_oid": "156",
+              "supermarket_name": "亞豐素 宏基",
+              "unit_price_mop": 54.5,
+              "subtotal_mop": 109.0
+            },
+            {
+              "keyword": "紙巾",
+              "quantity": 1,
+              "matched": true,
+              "product_oid": "1067",
+              "product_name": "潔柔C&S盒裝紙巾150抽x5盒",
+              "package_quantity": "150抽x5盒",
+              "supermarket_oid": "61",
+              "supermarket_name": "俾利喇街 來來超市",
+              "unit_price_mop": 24.0,
+              "subtotal_mop": 24.0
+            }
+          ],
+          "estimated_total_mop": 202.0,
+          "warnings": []
+        },
+        "warnings": [],
+        "errors": []
+      },
+      "errors": [],
+      "warnings": []
+    }
+  ],
+  "failed_steps": [],
+  "warnings": [],
+  "next_actions": [
+    "Review WEEKLY_REFRESH_REPORT.md and full category coverage report before deployment."
+  ]
+}

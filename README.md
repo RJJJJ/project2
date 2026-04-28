@@ -292,6 +292,17 @@ This is a query-service prototype for future optional providers. Existing API ro
 
 
 
+
+## Weekly data refresh
+
+Consumer Council price data usually updates every Wednesday. Run the weekly refresh after the Wednesday update to fetch 15 points, validate full category coverage, import SQLite, run smoke checks, and write weekly reports:
+
+```bash
+python scripts/weekly_data_refresh.py --max-points 15 --categories 1-19
+```
+
+Use `--sync-demo-data` only when you intentionally want to update `demo_data/processed` fallback assets. See `docs/WEEKLY_REFRESH.md` for the manual and Windows Task Scheduler workflow.
+
 ## D2C-D4A prototypes: SQLite provider, Gemini intent, grounded answer, agent tools
 
 ### Optional SQLite provider
