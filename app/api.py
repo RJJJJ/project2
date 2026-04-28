@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.schemas import (
     BasketAskRequest,
     BasketAskResponse,
+    ShoppingAgentRequest,
     TextResponse,
     UserAlertStatusRequest,
     UserWatchlistRequest,
@@ -39,6 +40,7 @@ from services.sqlite_query_service import (
     get_latest_date as sqlite_get_latest_date,
     search_product_candidates_for_point as sqlite_search_product_candidates_for_point,
 )
+from services.shopping_agent_orchestrator import run_shopping_agent
 
 
 router = APIRouter(prefix="/api")
@@ -213,6 +215,17 @@ def ask_basket(request: BasketAskRequest) -> dict[str, Any]:
         return _sqlite_basket_response(request)
     result, _point = _basket_result(request)
     return result
+
+
+@router.post("/agent/shopping")
+def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
+    db_path = get_sqlite_db_path()
+    return run_shopping_agent(
+        request.query,
+        db_path,
+        point_code=request.point_code,
+        use_llm=request.use_llm,
+    )
 
 
 @router.get("/products/candidates")

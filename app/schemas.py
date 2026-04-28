@@ -20,6 +20,12 @@ class BasketAskRequest(BaseModel):
     selected_products: list[SelectedProduct] | None = None
 
 
+class ShoppingAgentRequest(BaseModel):
+    query: str
+    point_code: str | None = None
+    use_llm: bool = False
+
+
 class BasketAskResponse(BaseModel):
     date: str
     point_code: str
