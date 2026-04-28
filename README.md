@@ -272,6 +272,24 @@ Outputs:
 
 Do not commit `data/raw` or `data/processed`; use the report to inspect coverage quality only.
 
+## SQLite query prototype
+
+Import processed JSONL into the local SQLite foundation database:
+
+```bash
+python scripts/import_processed_to_sqlite.py --date latest --max-points 15
+```
+
+Inspect the SQLite store without changing API defaults:
+
+```bash
+python scripts/query_sqlite_store.py --mode health
+python scripts/query_sqlite_store.py --mode candidates --point-code p001 --keyword 米
+python scripts/query_sqlite_store.py --mode basket --point-code p001 --keyword 米 --keyword 洗頭水
+```
+
+This is a query-service prototype for future optional providers. Existing API routes still use the JSONL path by default.
+
 ## Simple mode / advanced mode
 
 The web demo now defaults to **簡單模式** for ordinary users who only want to know where to buy:
