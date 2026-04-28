@@ -16,6 +16,19 @@ def test_space_separated_real_user_list():
     assert items["M&M"]["quantity"] == 1
 
 
+def test_single_general_keywords_parse():
+    for keyword in ["糖", "朱古力", "麵", "食油", "牛奶", "牙膏", "薯片", "洗頭水", "洗衣液", "米", "紙巾", "M&M"]:
+        parsed = parse_simple_basket_text(keyword)
+        assert len(parsed) == 1
+        expected = "油" if keyword == "食油" else keyword
+        assert parsed[0]["keyword"] == expected
+        assert parsed[0]["quantity"] == 1
+
+
+def test_space_separated_general_keywords_parse():
+    assert [item["keyword"] for item in parse_simple_basket_text("糖 朱古力 麵")] == ["糖", "朱古力", "麵"]
+
+
 def test_punctuation_and_newline_separators():
     for text in ["米、洗頭水、紙巾", "米，洗頭水，紙巾", "米, 洗頭水, 紙巾", "米\n洗頭水\n紙巾"]:
         assert [item["keyword"] for item in parse_simple_basket_text(text)] == ["米", "洗頭水", "紙巾"]

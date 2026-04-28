@@ -98,6 +98,16 @@ def _sqlite_basket_response(request: BasketAskRequest) -> dict[str, Any]:
     with connect_readonly(db_path) as conn:
         selected_date = _sqlite_date(conn, request.date)
         parsed_items = parse_simple_basket_text(request.text)
+        if not parsed_items:
+            return {
+                "date": selected_date,
+                "point_code": point_code,
+                "parsed_items": [],
+                "plans": [],
+                "warnings": ["未能識別購物清單，請輸入商品名稱，例如：米、洗頭水、紙巾。"],
+                "recommended_plan_type": None,
+                "recommendation_reason": "請輸入商品名稱，例如：米、洗頭水、紙巾。",
+            }
         basket = build_sqlite_simple_basket(conn, selected_date, point_code, parsed_items)
     stores_by_oid: dict[str, dict[str, Any]] = {}
     plan_items: list[dict[str, Any]] = []

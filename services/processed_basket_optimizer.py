@@ -316,6 +316,14 @@ def optimize_basket(
     items: list[dict[str, Any]],
     processed_root: Path | None = None,
 ) -> dict[str, Any]:
+    if not items:
+        return {
+            "date": date,
+            "point_code": point_code,
+            "plans": [],
+            "warnings": ["未能識別購物清單，請輸入商品名稱，例如：米、洗頭水、紙巾。"],
+        }
+
     cheapest_by_item = optimize_basket_cheapest_by_item(date, point_code, items, processed_root)
     plans = [
         cheapest_by_item,

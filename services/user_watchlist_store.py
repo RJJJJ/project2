@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,7 +62,14 @@ def save_store(data: dict[str, Any], path: Path | str | None = None) -> None:
     with tmp_path.open("w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
         file.write("\n")
-    os.replace(tmp_path, store_path)
+    try:
+        os.replace(tmp_path, store_path)
+    except PermissionError:
+        # Some Windows test sandboxes intermittently deny atomic replace on
+        # temp files. Fall back to a direct copy so local state updates still
+        # complete; this store is a demo JSON file, not a transactional DB.
+        shutil.copyfile(tmp_path, store_path)
+        tmp_path.unlink(missing_ok=True)
 
 
 def get_user_watchlist(user_token: str, path: Path | str | None = None) -> list[dict[str, Any]]:

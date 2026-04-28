@@ -23,6 +23,12 @@ def recommend_plan(
     plans: list[dict[str, Any]],
     convenience_threshold_mop: float = 5.0,
 ) -> dict[str, str]:
+    if not plans:
+        return {
+            "recommended_plan_type": None,
+            "recommendation_reason": "請輸入商品名稱，例如：米、洗頭水、紙巾。",
+        }
+
     cheapest_by_item = _plan_by_type(plans, "cheapest_by_item")
     cheapest_single_store = _plan_by_type(plans, "cheapest_single_store")
     cheapest_two_stores = _plan_by_type(plans, "cheapest_two_stores")
