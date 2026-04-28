@@ -27,3 +27,10 @@
 - Route-aware or distance-aware recommendation improvements.
 - User feedback capture for incorrect matches or recommendations.
 - Database-backed historical price storage when MVP JSONL limits are reached.
+
+## Coverage QA status
+
+- Done: 15 collection points coverage QA for 500m processed demo data.
+- Next: 45 collection points.
+- Next: 100-500 米 radius support.
+- Next: Persistent DB.

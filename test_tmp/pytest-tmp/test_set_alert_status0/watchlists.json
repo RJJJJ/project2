@@ -1,0 +1,17 @@
+{
+  "users": {
+    "demo-user-token": {
+      "watchlist": [],
+      "alert_history": [
+        {
+          "alert_id": "p001:659:near_historical_low:2026-04-27",
+          "product_oid": 659,
+          "point_code": "p001",
+          "alert_type": "near_historical_low",
+          "status": "viewed",
+          "updated_at": "2026-04-28T03:26:21.600320+00:00"
+        }
+      ]
+    }
+  }
+}

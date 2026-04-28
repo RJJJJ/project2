@@ -242,3 +242,32 @@ git push origin main
 ```
 
 注意：不要 commit `data/raw/` 或 `data/processed/`；只 commit `demo_data/processed` 作為線上 demo fallback data。
+
+## 15-point coverage QA
+
+Current demo coverage is based on the first 15 `config/collection_points.json` entries at 500m radius. The coverage workflow is read-only against processed JSONL and does not re-fetch crawler data.
+
+Update the 15 processed points:
+
+```bash
+python scripts/update_demo_data.py --max-points 15 --preset demo_daily
+```
+
+Sync the 15-point fallback demo data when preparing deployment/demo assets:
+
+```bash
+python scripts/update_demo_data.py --max-points 15 --preset demo_daily --sync-demo-data
+```
+
+Generate the coverage report after updating processed data:
+
+```bash
+python scripts/generate_coverage_report.py --max-points 15
+```
+
+Outputs:
+
+- `COVERAGE_REPORT.md` for human QA review.
+- `data/reports/coverage_report.json` for structured QA evidence.
+
+Do not commit `data/raw` or `data/processed`; use the report to inspect coverage quality only.

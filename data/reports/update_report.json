@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-27T15:54:41+08:00",
-  "date": "2026-04-27",
+  "generated_at": "2026-04-28T11:04:10+08:00",
+  "date": "2026-04-28",
   "preset": "demo_daily",
-  "max_points": 5,
+  "max_points": 15,
   "sync_demo_data": true,
   "points": [
     {
@@ -19,6 +19,13 @@
       "basket_total": 96.0,
       "signals_ok": true,
       "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 10,
+      "historical_warnings": [],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 1,
+      "watchlist_alerts_notify_count": 1,
+      "watchlist_alert_warnings": [],
       "warnings": [],
       "errors": []
     },
@@ -36,6 +43,13 @@
       "basket_total": 95.0,
       "signals_ok": true,
       "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 10,
+      "historical_warnings": [],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 1,
+      "watchlist_alerts_notify_count": 1,
+      "watchlist_alert_warnings": [],
       "warnings": [],
       "errors": []
     },
@@ -53,6 +67,13 @@
       "basket_total": 95.5,
       "signals_ok": true,
       "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 10,
+      "historical_warnings": [],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 1,
+      "watchlist_alerts_notify_count": 1,
+      "watchlist_alert_warnings": [],
       "warnings": [],
       "errors": []
     },
@@ -70,6 +91,13 @@
       "basket_total": 96.7,
       "signals_ok": true,
       "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 10,
+      "historical_warnings": [],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 1,
+      "watchlist_alerts_notify_count": 1,
+      "watchlist_alert_warnings": [],
       "warnings": [],
       "errors": []
     },
@@ -87,15 +115,354 @@
       "basket_total": 102.5,
       "signals_ok": true,
       "largest_gap_count": 0,
+      "historical_signals_ok": true,
+      "historical_signals_count": 10,
+      "historical_warnings": [],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 1,
+      "watchlist_alerts_notify_count": 1,
+      "watchlist_alert_warnings": [],
       "warnings": [],
+      "errors": []
+    },
+    {
+      "point_code": "p006",
+      "name": "凱泉灣",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 7,
+      "products_found": 160,
+      "price_records_found": 852,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 82.3,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p007",
+      "name": "蓮峰",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 16,
+      "products_found": 160,
+      "price_records_found": 1921,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 95.0,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p008",
+      "name": "台山",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 14,
+      "products_found": 160,
+      "price_records_found": 1838,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 95.0,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p009",
+      "name": "荷蘭園",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 12,
+      "products_found": 160,
+      "price_records_found": 1457,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 96.0,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p010",
+      "name": "西灣",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 9,
+      "products_found": 160,
+      "price_records_found": 1131,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 82.3,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p011",
+      "name": "新口岸",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 5,
+      "products_found": 160,
+      "price_records_found": 690,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 98.5,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p012",
+      "name": "宋玉生廣場",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 4,
+      "products_found": 160,
+      "price_records_found": 565,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 98.5,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p013",
+      "name": "觀音堂",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 11,
+      "products_found": 160,
+      "price_records_found": 1395,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 96.0,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p014",
+      "name": "鏡湖醫院",
+      "district": "澳門半島",
+      "fetch_ok": true,
+      "supermarkets_found": 16,
+      "products_found": 160,
+      "price_records_found": 1837,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 96.0,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "errors": []
+    },
+    {
+      "point_code": "p015",
+      "name": "中央公園",
+      "district": "氹仔",
+      "fetch_ok": true,
+      "supermarkets_found": 7,
+      "products_found": 160,
+      "price_records_found": 838,
+      "failed_requests": [],
+      "validation_ok": true,
+      "basket_ok": true,
+      "basket_total": 96.7,
+      "signals_ok": true,
+      "largest_gap_count": 20,
+      "historical_signals_ok": true,
+      "historical_signals_count": 0,
+      "historical_warnings": [
+        "Not enough historical dates for historical comparison."
+      ],
+      "watchlist_alerts_ok": true,
+      "watchlist_alerts_count": 0,
+      "watchlist_alerts_notify_count": 0,
+      "watchlist_alert_warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
+      "warnings": [
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison.",
+        "Not enough historical dates for historical comparison."
+      ],
       "errors": []
     }
   ],
   "summary": {
-    "points_total": 5,
-    "points_fetch_ok": 5,
-    "points_basket_ok": 5,
-    "points_signals_ok": 5,
+    "points_total": 15,
+    "points_fetch_ok": 15,
+    "points_basket_ok": 15,
+    "points_signals_ok": 15,
+    "points_historical_signals_ok": 15,
+    "points_watchlist_alerts_ok": 15,
     "failed_points": []
   }
 }

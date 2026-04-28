@@ -28,6 +28,8 @@ const demoExamples = [
 
 const points = ref([])
 const pointCode = ref('p001')
+const pointSearch = ref('')
+const districtOrder = ['\u6fb3\u9580\u534a\u5cf6', '\u6c39\u4ed4', '\u8def\u74b0', '\u6fb3\u5927']
 const shoppingText = ref(defaultText)
 const basketResult = ref(null)
 const signals = ref(null)
@@ -74,6 +76,27 @@ const planLabels = {
 }
 
 const selectedPoint = computed(() => points.value.find((point) => point.point_code === pointCode.value))
+
+const filteredPointGroups = computed(() => {
+  const keyword = pointSearch.value.trim().toLowerCase()
+  const filtered = points.value.filter((point) => {
+    if (!keyword) return true
+    return [point.name, point.district, point.point_code]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword))
+  })
+  const extraDistricts = filtered
+    .map((point) => point.district)
+    .filter((district) => district && !districtOrder.includes(district))
+  const districts = [...districtOrder, ...new Set(extraDistricts)]
+  return districts
+    .map((district) => ({
+      district,
+      points: filtered.filter((point) => point.district === district),
+    }))
+    .filter((group) => group.points.length)
+})
+const hasFilteredPoints = computed(() => filteredPointGroups.value.some((group) => group.points.length))
 
 const selectedPlan = computed(() => {
   const plans = basketResult.value?.plans || []
@@ -738,15 +761,25 @@ onMounted(async () => {
           <div class="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
             <label class="flex flex-col gap-2">
               <span class="text-sm font-medium text-slate-700">地區</span>
+              <input
+                v-model="pointSearch"
+                type="search"
+                :placeholder="'\u641c\u5c0b\u5730\u5340\uff0c\u4f8b\u5982 \u9ad8\u58eb\u5fb7\u3001\u95dc\u9598\u3001\u53f0\u5c71'"
+                class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-slate-700"
+                :disabled="loadingPoints"
+              />
               <select
                 v-model="pointCode"
                 class="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-slate-700"
-                :disabled="loadingPoints"
+                :disabled="loadingPoints || !hasFilteredPoints"
               >
-                <option v-for="point in points" :key="point.point_code" :value="point.point_code">
-                  {{ point.name }} / {{ point.district }}
-                </option>
+                <optgroup v-for="group in filteredPointGroups" :key="group.district" :label="group.district">
+                  <option v-for="point in group.points" :key="point.point_code" :value="point.point_code">
+                    {{ point.name }} / {{ point.district }}
+                  </option>
+                </optgroup>
               </select>
+              <p v-if="!loadingPoints && !hasFilteredPoints" class="text-sm text-slate-500">{{ '\u627e\u4e0d\u5230\u76f8\u95dc\u5730\u5340' }}</p>
             </label>
 
             <div class="rounded-md bg-slate-50 p-3 text-sm text-slate-700">

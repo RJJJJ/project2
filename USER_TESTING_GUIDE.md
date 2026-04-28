@@ -53,3 +53,20 @@ Web 內建 feedback 只保存在使用者當前瀏覽器：
 - Watchlist 與 feedback 都只存在 browser localStorage。
 - Render 免費服務可能冷啟動，第一次載入可能較慢。
 - Alert Rules 只生成提醒候選，不做真正推送。
+
+## 15-point coverage and point-search testing
+
+During user testing, select at least 3 different districts / collection points before judging recommendation quality. Include examples from Macau peninsula and Taipa when available.
+
+Record:
+
+- Which selected areas produce obviously unreasonable results.
+- Which selected areas appear to lack supermarkets or products.
+- Whether the point search box can find areas by name, district, and point code.
+- Whether searches for `高士德`, `台山`, and `氹仔` show expected matches.
+- Whether an unmatched search shows `找不到相關地區`.
+
+Regression checks:
+
+- Switching points still refreshes basket, candidates, local price-gap signals, historical signals, watchlist signals, and alert center data for the selected `point_code`.
+- Direct plan generation and selected-product generation both still work after changing points.

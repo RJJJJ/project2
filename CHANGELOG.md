@@ -60,3 +60,14 @@ All notable MVP presentation-package changes are tracked here.
 
 - This changelog is for presentation/package documentation only.
 - Backend code, frontend code, crawler, optimizer, deployment config, and data files were intentionally left unchanged.
+
+## 2026-04-28 - 15-point coverage QA and point search
+
+### Added
+
+- 15-point coverage report script producing `COVERAGE_REPORT.md` and `data/reports/coverage_report.json` from processed JSONL.
+- Searchable grouped point selector in the frontend, grouped by district and searchable by name, district, or point code.
+
+### Notes
+
+- No LLM, database, crawler-core, optimizer-flow, Telegram Bot, deployment-config, radius, or 45-point expansion changes.

@@ -575,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Markdown report written: {options.report_path}")
         print(f"JSON report written: {options.json_report_path}")
         print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
+        print("Tip: run python scripts/generate_coverage_report.py --max-points 15 to inspect coverage quality.")
 
     return 1 if report["summary"]["failed_points"] else 0
 
