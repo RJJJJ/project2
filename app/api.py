@@ -31,6 +31,14 @@ from services.product_candidate_search import search_product_candidates
 from services.watchlist_alert_service import generate_watchlist_alerts
 from services.watchlist_signal_service import analyze_watchlist_items
 from services import user_watchlist_store
+from services.data_provider_config import get_sqlite_db_path, is_sqlite_provider_enabled
+from services.simple_basket_parser import parse_simple_basket_text
+from services.sqlite_query_service import (
+    build_sqlite_simple_basket,
+    connect_readonly,
+    get_latest_date as sqlite_get_latest_date,
+    search_product_candidates_for_point as sqlite_search_product_candidates_for_point,
+)
 
 
 router = APIRouter(prefix="/api")
@@ -64,6 +72,58 @@ def _basket_result(request: BasketAskRequest) -> tuple[dict[str, Any], dict[str,
     selected_products = [item.dict() for item in request.selected_products or []]
     result = build_result(date, point_code, request.text, processed_root, selected_products=selected_products)
     return result, point
+
+
+
+def _sqlite_db_path_or_503() -> Any:
+    db_path = get_sqlite_db_path()
+    if not db_path.exists():
+        raise HTTPException(status_code=503, detail=f"SQLite provider enabled but database not found: {db_path}")
+    return db_path
+
+
+def _sqlite_date(conn: Any, requested_date: str) -> str:
+    if requested_date == "latest":
+        latest = sqlite_get_latest_date(conn)
+        if not latest:
+            raise HTTPException(status_code=503, detail="SQLite provider enabled but no price_records date found")
+        return latest
+    return requested_date
+
+
+def _sqlite_basket_response(request: BasketAskRequest) -> dict[str, Any]:
+    point = resolve_point_from_request(request.point_code, request.point_name, request.district)
+    point_code = str(point["point_code"])
+    db_path = _sqlite_db_path_or_503()
+    with connect_readonly(db_path) as conn:
+        selected_date = _sqlite_date(conn, request.date)
+        parsed_items = parse_simple_basket_text(request.text)
+        basket = build_sqlite_simple_basket(conn, selected_date, point_code, parsed_items)
+    stores_by_oid: dict[str, dict[str, Any]] = {}
+    plan_items: list[dict[str, Any]] = []
+    for item in basket["items"]:
+        plan_item = dict(item)
+        if item.get("matched"):
+            plan_item["requested_quantity"] = item.get("quantity", 1)
+            supermarket_oid = str(item.get("supermarket_oid"))
+            stores_by_oid.setdefault(supermarket_oid, {"supermarket_oid": item.get("supermarket_oid"), "supermarket_name": item.get("supermarket_name")})
+        plan_items.append(plan_item)
+    plan = {
+        "plan_type": "sqlite_simple_basket",
+        "estimated_total_mop": basket["estimated_total_mop"],
+        "store_count": len(stores_by_oid),
+        "stores": list(stores_by_oid.values()),
+        "items": plan_items,
+    }
+    return {
+        "date": selected_date,
+        "point_code": point_code,
+        "parsed_items": [{"keyword": item.get("keyword"), "quantity": item.get("quantity", 1)} for item in parsed_items],
+        "plans": [plan],
+        "warnings": basket.get("warnings", []),
+        "recommended_plan_type": "sqlite_simple_basket",
+        "recommendation_reason": "SQLite prototype：根據商品匹配及最低價生成，未等同正式採購優化器。",
+    }
 
 
 def _signals_result(point_code: str, date: str, top_n: int) -> dict[str, Any]:
@@ -135,6 +195,8 @@ def search_points(q: str = Query(..., min_length=1)) -> dict[str, Any]:
 
 @router.post("/basket/ask", response_model=BasketAskResponse)
 def ask_basket(request: BasketAskRequest) -> dict[str, Any]:
+    if is_sqlite_provider_enabled():
+        return _sqlite_basket_response(request)
     result, _point = _basket_result(request)
     return result
 
@@ -146,10 +208,17 @@ def product_candidates(
     date: str = "latest",
     limit: int = Query(10, ge=1, le=50),
 ) -> dict[str, Any]:
-    processed_root = get_processed_root()
-    selected_date = resolve_date(date, processed_root)
     point = resolve_point_from_request(point_code=point_code)
     selected_point_code = str(point["point_code"])
+    if is_sqlite_provider_enabled():
+        db_path = _sqlite_db_path_or_503()
+        with connect_readonly(db_path) as conn:
+            selected_date = _sqlite_date(conn, date)
+            candidates = sqlite_search_product_candidates_for_point(conn, selected_date, selected_point_code, keyword, limit=limit)
+        return {"date": selected_date, "point_code": selected_point_code, "keyword": keyword, "candidates": candidates}
+
+    processed_root = get_processed_root()
+    selected_date = resolve_date(date, processed_root)
     ensure_processed_data_exists(selected_date, selected_point_code, processed_root)
     return {
         "date": selected_date,

@@ -290,6 +290,49 @@ python scripts/query_sqlite_store.py --mode basket --point-code p001 --keyword �
 
 This is a query-service prototype for future optional providers. Existing API routes still use the JSONL path by default.
 
+
+
+## D2C-D4A prototypes: SQLite provider, Gemini intent, grounded answer, agent tools
+
+### Optional SQLite provider
+
+The default backend provider remains `jsonl`. To opt into the SQLite prototype for supported API paths only:
+
+```powershell
+$env:PROJECT2_DATA_PROVIDER="sqlite"
+$env:PROJECT2_SQLITE_DB_PATH="data/app_state/project2_dev.sqlite3"
+python scripts/import_processed_to_sqlite.py --date latest --max-points 15
+python scripts/smoke_check_sqlite_provider.py
+```
+
+SQLite provider support is intentionally limited and prototype-only. If SQLite is enabled but the DB file is missing, the API returns a clear 503 instead of silently falling back.
+
+### Gemini intent parser prototype
+
+Gemini is only used to extract structured intent JSON. It must not generate prices, stores, totals, or product availability. Without `GEMINI_API_KEY`, the parser falls back to deterministic rules:
+
+```bash
+python scripts/parse_intent.py --no-gemini --text "??????????????????????"
+```
+
+### Grounded SQLite answer prototype
+
+Grounded answers are formatted from SQLite query results; facts come from the database, not from Gemini:
+
+```bash
+python scripts/run_grounded_sqlite_answer.py --text "??????????????????????" --point-code p001
+```
+
+### Agent tool demo prototype
+
+Agent tools expose deterministic tool functions for future integration. This is not an autonomous agent loop and does not use LLM tool selection:
+
+```bash
+python scripts/run_agent_tool_demo.py --text "??????????????????????" --provider sqlite --point-code p001
+```
+
+No RAG is used in these prototypes.
+
 ## Simple mode / advanced mode
 
 The web demo now defaults to **簡單模式** for ordinary users who only want to know where to buy:
