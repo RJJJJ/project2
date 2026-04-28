@@ -20,6 +20,9 @@ const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 const WATCHLIST_STORAGE_KEY = 'macau-shopping-watchlist-v1'
 const FEEDBACK_STORAGE_KEY = 'macau-shopping-feedback-v1'
 const USER_MODE_STORAGE_KEY = 'macau-shopping-user-mode-v1'
+const UI_MODE_STORAGE_KEY = 'macau-shopping-ui-mode-v1'
+const quickItems = ['\u7c73', '\u6d17\u982d\u6c34', '\u7d19\u5dfe', '\u98df\u6cb9', '\u725b\u5976', '\u6d17\u8863\u6db2', '\u7259\u818f']
+
 const demoExamples = [
   { label: '基本日用品', text: '我想買一包米、兩支洗頭水、一包紙巾' },
   { label: '清潔用品', text: '我想買洗衣液、消毒濕紙巾、廁紙' },
@@ -28,6 +31,8 @@ const demoExamples = [
 
 const points = ref([])
 const pointCode = ref('p001')
+const uiMode = ref('simple')
+const showSimpleCandidates = ref(false)
 const pointSearch = ref('')
 const districtOrder = ['\u6fb3\u9580\u534a\u5cf6', '\u6c39\u4ed4', '\u8def\u74b0', '\u6fb3\u5927']
 const shoppingText = ref(defaultText)
@@ -70,9 +75,9 @@ const savedFeedback = ref([])
 const showSavedFeedback = ref(false)
 
 const planLabels = {
-  cheapest_by_item: '單品最低價',
-  cheapest_single_store: '推薦：只去一間店',
-  cheapest_two_stores: '最多兩間店',
+  cheapest_by_item: '\u5206\u958b\u8cb7\u6700\u4fbf\u5b9c',
+  cheapest_single_store: '\u53ea\u53bb\u4e00\u9593\u5e97',
+  cheapest_two_stores: '\u6700\u591a\u5169\u9593\u5e97',
 }
 
 const selectedPoint = computed(() => points.value.find((point) => point.point_code === pointCode.value))
@@ -111,6 +116,11 @@ const historicalSignalWarnings = computed(() => historicalSignals.value?.warning
 const watchlistSignalItems = computed(() => watchlistSignals.value?.items || [])
 const watchlistAlertItems = computed(() => watchlistAlerts.value?.alerts || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
+const isSimpleMode = computed(() => uiMode.value === 'simple')
+const simpleSignalItems = computed(() => signalItems.value.slice(0, 3))
+const selectedStoresText = computed(() => (selectedPlan.value?.stores || []).map((store) => store.supermarket_name || store.supermarket_oid).join('?'))
+const simpleRecommendationTitle = computed(() => selectedStoresText.value ? `?????${selectedStoresText.value}?` : '??????????')
+const simpleRecommendationReason = computed(() => basketResult.value?.recommendation_reason || '??????????????????????????')
 const selectedProducts = computed(() =>
   candidateGroups.value
     .map((group) => ({
@@ -171,6 +181,29 @@ function saveUserModeToStorage() {
     USER_MODE_STORAGE_KEY,
     JSON.stringify({ mode: userMode.value, user_token: userToken.value || 'demo-user-token' }),
   )
+}
+
+function loadUiModeFromStorage() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(UI_MODE_STORAGE_KEY) || '{}')
+    uiMode.value = parsed.mode === 'advanced' ? 'advanced' : 'simple'
+  } catch (err) {
+    uiMode.value = 'simple'
+  }
+}
+
+function saveUiModeToStorage() {
+  window.localStorage.setItem(UI_MODE_STORAGE_KEY, JSON.stringify({ mode: uiMode.value }))
+}
+
+function setUiMode(mode) {
+  uiMode.value = mode === 'advanced' ? 'advanced' : 'simple'
+  saveUiModeToStorage()
+}
+
+function addQuickItem(item) {
+  const current = shoppingText.value.trim()
+  shoppingText.value = current ? `${current}?${item}` : item
 }
 
 async function loadServerWatchlist() {
@@ -656,6 +689,7 @@ watch([userMode, userToken], () => {
 })
 
 onMounted(async () => {
+  loadUiModeFromStorage()
   loadUserModeFromStorage()
   loadWatchlistFromStorage()
   loadFeedbackFromStorage()
@@ -670,13 +704,124 @@ onMounted(async () => {
 <template>
   <main class="min-h-screen">
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-      <header class="flex flex-col gap-1 border-b border-slate-200 pb-4">
-        <h1 class="text-2xl font-semibold text-slate-950 sm:text-3xl">澳門採購決策 Agent MVP</h1>
-        <p class="text-sm text-slate-600">本地採購方案與本區價差訊號</p>
-        <p class="text-sm text-slate-500">資料範圍：所選採集點附近約 500 米。價格只供參考，以店內標示為準。</p>
+      <header class="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-3xl font-semibold text-slate-950 sm:text-4xl">澳門超市格價助手</h1>
+          <p class="mt-2 text-base leading-7 text-slate-700">輸入想買的東西，幫你找附近較抵的採購方案。</p>
+          <p v-if="uiMode === 'advanced'" class="mt-1 text-sm text-slate-500">進階模式會顯示商品選擇、價差訊號、提醒、Feedback 與技術詳情。</p>
+        </div>
+        <div class="grid grid-cols-2 rounded-full border border-slate-300 bg-white p-1 text-sm font-medium shadow-sm">
+          <button type="button" class="rounded-full px-4 py-2" :class="uiMode === 'simple' ? 'bg-slate-950 text-white' : 'text-slate-700 hover:bg-slate-50'" @click="setUiMode('simple')">簡單模式</button>
+          <button type="button" class="rounded-full px-4 py-2" :class="uiMode === 'advanced' ? 'bg-slate-950 text-white' : 'text-slate-700 hover:bg-slate-50'" @click="setUiMode('advanced')">進階模式</button>
+        </div>
       </header>
 
-      <details class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" open>
+      <section v-if="isSimpleMode" class="grid gap-5">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div class="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <div class="grid gap-3">
+              <div class="text-sm font-semibold text-emerald-700">第一步：你在哪個地區？</div>
+              <label class="flex flex-col gap-2">
+                <span class="text-base font-medium text-slate-800">地區</span>
+                <input v-model="pointSearch" type="search" :placeholder="'搜尋地區，例如 高士德、關閘、台山'" class="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 outline-none focus:border-slate-700" :disabled="loadingPoints" />
+                <select v-model="pointCode" class="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 outline-none focus:border-slate-700" :disabled="loadingPoints || !hasFilteredPoints">
+                  <optgroup v-for="group in filteredPointGroups" :key="`simple-${group.district}`" :label="group.district">
+                    <option v-for="point in group.points" :key="`simple-${point.point_code}`" :value="point.point_code">{{ point.name }} / {{ point.district }}</option>
+                  </optgroup>
+                </select>
+                <p v-if="!loadingPoints && !hasFilteredPoints" class="text-base text-slate-600">找不到相關地區</p>
+                <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">目前資料範圍：約 500 米</p>
+              </label>
+            </div>
+
+            <div class="grid gap-4">
+              <div class="text-sm font-semibold text-emerald-700">第二步：你想買什麼？</div>
+              <label class="flex flex-col gap-2">
+                <span class="text-base font-medium text-slate-800">購物清單</span>
+                <textarea v-model="shoppingText" rows="6" placeholder="例如：一包米、兩支洗頭水、一包紙巾" class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-lg leading-8 text-slate-950 outline-none focus:border-slate-700" />
+              </label>
+              <div>
+                <div class="text-base font-medium text-slate-800">常用商品</div>
+                <div class="mt-3 flex flex-wrap gap-3">
+                  <button v-for="item in quickItems" :key="item" type="button" class="min-h-11 rounded-full border border-slate-300 bg-white px-4 text-base font-medium text-slate-800 hover:bg-slate-50" @click="addQuickItem(item)">{{ item }}</button>
+                </div>
+              </div>
+              <div class="pt-2">
+                <div class="mb-2 text-sm font-semibold text-emerald-700">第三步：看建議</div>
+                <button type="button" class="min-h-14 w-full rounded-xl bg-emerald-700 px-6 text-lg font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto" :disabled="loadingBasket || !shoppingText.trim() || !pointCode" @click="generatePlan">{{ loadingBasket ? '正在幫你比較…' : '幫我找最抵買法' }}</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="error" class="mt-4 rounded-xl bg-red-50 p-4 text-base leading-7 text-red-800">
+            <p>系統暫時未能完成查詢，請稍後再試。這不是你的操作問題。</p>
+            <details v-if="errorDiagnostic" class="mt-2 text-sm text-red-900"><summary class="cursor-pointer font-medium">更多資訊</summary><div class="mt-2">{{ errorDiagnostic.message }}</div></details>
+          </div>
+        </article>
+
+        <article v-if="basketResult" class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+          <div v-if="!hasPlan" class="rounded-xl bg-slate-50 p-4 text-base text-slate-700">暫時找不到完整採購方案，請試試換一個商品名稱或地區。</div>
+          <div v-else class="grid gap-6">
+            <div class="rounded-2xl bg-emerald-50 p-5">
+              <div class="text-lg font-semibold text-emerald-900">{{ simpleRecommendationTitle }}</div>
+              <div class="mt-3 text-sm font-medium text-emerald-800">預計總價</div>
+              <div class="mt-1 text-4xl font-bold text-slate-950">{{ money(selectedPlan?.estimated_total_mop) }}</div>
+              <p class="mt-4 text-base leading-7 text-slate-800">原因：{{ simpleRecommendationReason }}</p>
+            </div>
+            <section>
+              <h2 class="text-xl font-semibold text-slate-950">要買的東西</h2>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <article v-for="item in selectedPlan?.items || []" :key="`simple-item-${item.keyword}-${item.product_oid}`" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 class="text-lg font-semibold leading-7 text-slate-950">{{ item.product_name || item.keyword }}</h3>
+                  <div class="mt-3 space-y-2 text-base leading-7 text-slate-800">
+                    <div>{{ item.package_quantity || '規格未列明' }}?{{ money(item.unit_price_mop) }}<span v-if="item.requested_quantity"> ? {{ item.requested_quantity }}</span></div>
+                    <div v-if="item.subtotal_mop !== null && item.subtotal_mop !== undefined" class="font-semibold">小計：{{ money(item.subtotal_mop) }}</div>
+                    <div>在：{{ item.supermarket_name || 'N/A' }}</div>
+                  </div>
+                </article>
+              </div>
+            </section>
+            <section v-if="otherPlans.length">
+              <h2 class="text-xl font-semibold text-slate-950">其他選擇</h2>
+              <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                <article v-for="plan in otherPlans" :key="`simple-plan-${plan.plan_type}`" class="rounded-xl border border-slate-200 p-4">
+                  <div class="text-base font-semibold text-slate-950">{{ planLabel(plan.plan_type) }}</div>
+                  <div class="mt-2 text-2xl font-semibold text-slate-950">{{ money(plan.estimated_total_mop) }}</div>
+                  <div class="mt-1 text-base text-slate-700">要去 {{ plan.store_count ?? 0 }} 間店</div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </article>
+
+        <details class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <summary class="cursor-pointer text-lg font-semibold text-slate-950">想指定品牌 / 規格？</summary>
+          <p class="mt-3 text-base leading-7 text-slate-700">如果你想指定 5公斤米、某牌子洗頭水，可以在這裡選。</p>
+          <button type="button" class="mt-4 min-h-12 rounded-xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100" :disabled="loadingCandidates || loadingBasket || !shoppingText.trim() || !pointCode" @click="findCandidates">{{ loadingCandidates ? '正在找商品選擇…' : '顯示商品選擇' }}</button>
+          <div v-if="candidateGroups.length" class="mt-5 grid gap-4">
+            <article v-for="group in candidateGroups" :key="`simple-candidates-${group.keyword}`" class="rounded-xl border border-slate-200 p-4">
+              <h3 class="text-lg font-semibold text-slate-950">{{ group.keyword }} x {{ group.quantity }}</h3>
+              <div class="mt-3 grid gap-3">
+                <label class="flex cursor-pointer gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3"><input v-model="selectedCandidateOids[group.keyword]" type="radio" class="mt-1" :name="`simple-candidate-${group.keyword}`" value="" /><div><div class="font-medium text-slate-950">由系統自動選</div><div class="mt-1 text-sm text-slate-600">適合不想指定品牌或規格的情況。</div></div></label>
+                <label v-for="candidate in group.candidates" :key="`simple-${group.keyword}-${candidate.product_oid}`" class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input v-model="selectedCandidateOids[group.keyword]" type="radio" class="mt-1" :name="`simple-candidate-${group.keyword}`" :value="candidate.product_oid" /><div><div class="font-medium text-slate-950">{{ candidate.product_name }}</div><div class="mt-1 text-sm text-slate-700">{{ candidate.package_quantity || '規格未列明' }}?{{ money(candidate.min_price_mop) }} - {{ money(candidate.max_price_mop) }}</div></div></label>
+              </div>
+            </article>
+            <button type="button" class="min-h-12 rounded-xl bg-emerald-700 px-5 text-base font-semibold text-white" :disabled="loadingBasket" @click="generatePlanWithSelectedProducts">{{ loadingBasket ? '正在幫你比較…' : '用以上商品選擇再找一次' }}</button>
+          </div>
+        </details>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="text-xl font-semibold text-slate-950">附近價差較大的商品</h2>
+          <p class="mt-2 text-base leading-7 text-slate-700">這些商品不同超市價差較大，購買前可以多比較。</p>
+          <p v-if="loadingSignals" class="mt-4 text-base text-slate-600">正在載入價差訊號…</p>
+          <div v-else-if="simpleSignalItems.length" class="mt-4 grid gap-4 sm:grid-cols-3">
+            <article v-for="item in simpleSignalItems" :key="`simple-signal-${item.product_oid}-${item.product_name}`" class="rounded-xl border border-slate-200 bg-slate-50 p-4"><h3 class="text-base font-semibold leading-6 text-slate-950">{{ item.product_name }}</h3><div class="mt-3 grid gap-2 text-base text-slate-800"><div>最低價：{{ money(item.min_price_mop) }}</div><div>最高價：{{ money(item.max_price_mop) }}</div><div class="font-semibold text-red-700">價差：{{ percent(item.gap_percent) }}</div></div></article>
+          </div>
+          <p v-else class="mt-4 text-base text-slate-600">暫時沒有明顯價差訊號。</p>
+        </article>
+      </section>
+
+      <details v-if="uiMode === 'advanced'" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" open>
         <summary class="cursor-pointer text-base font-semibold text-slate-950">如何使用</summary>
         <ol class="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
           <li class="rounded-md bg-slate-50 p-3">1. 選擇你附近的地區。</li>
@@ -688,7 +833,7 @@ onMounted(async () => {
         </p>
       </details>
 
-      <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section v-if="uiMode === 'advanced'" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 class="text-base font-semibold text-slate-950">資料保存模式</h2>
@@ -756,7 +901,7 @@ onMounted(async () => {
         </div>
       </section>
 
-      <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section v-if="uiMode === 'advanced'" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
             <label class="flex flex-col gap-2">
@@ -1135,7 +1280,7 @@ onMounted(async () => {
         </aside>
       </section>
 
-      <section v-if="candidateGroups.length" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section v-if="uiMode === 'advanced' && candidateGroups.length" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-slate-950">確認商品 / 規格</h2>
@@ -1235,7 +1380,7 @@ onMounted(async () => {
         </div>
       </section>
 
-      <section v-if="basketResult" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section v-if="uiMode === 'advanced' && basketResult" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div v-if="!hasPlan" class="rounded-md bg-slate-50 p-4 text-sm text-slate-700">
           暫時找不到完整採購方案，請嘗試更換商品名稱或地區。
         </div>
@@ -1317,7 +1462,7 @@ onMounted(async () => {
         </div>
       </section>
 
-      <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section v-if="uiMode === 'advanced'" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 class="text-base font-semibold text-slate-950">試用回饋</h2>

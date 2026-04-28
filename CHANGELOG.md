@@ -2,6 +2,20 @@
 
 All notable MVP presentation-package changes are tracked here.
 
+## v1.0-simple - Senior-friendly Simple Mode
+
+### Added
+
+- Senior-friendly simple mode as the default frontend mode.
+- Larger recommendation and item cards for the core flow.
+- Simplified recommendation copy focused on where to buy, total price, and reason.
+- Optional product specification flow behind `想指定品牌 / 規格？`.
+
+### Notes
+
+- Advanced mode keeps the existing candidate UX, watchlist, alerts, historical signals, feedback, server mode, and technical details.
+- No LLM, database, crawler, optimizer, backend API, deployment config, or data pipeline changes.
+
 ## v0.9 - Server-side MVP Readiness Batch
 
 ### Added

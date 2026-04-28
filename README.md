@@ -271,3 +271,22 @@ Outputs:
 - `data/reports/coverage_report.json` for structured QA evidence.
 
 Do not commit `data/raw` or `data/processed`; use the report to inspect coverage quality only.
+
+## Simple mode / advanced mode
+
+The web demo now defaults to **簡單模式** for ordinary users who only want to know where to buy:
+
+1. Choose a district.
+2. Enter a shopping list.
+3. Click `幫我找最抵買法`.
+
+Simple mode uses larger cards, clearer result wording, optional product specification, and hides technical terms such as `product_oid`, raw ranking details, server/local mode, and alert internals.
+
+**進階模式** keeps the full MVP surface for demos and QA:
+
+- Direct plan generation.
+- Product specification / candidate selection.
+- Detailed price-gap and historical signals.
+- Watchlist and Alert Center.
+- Feedback.
+- Server/local mode and technical diagnostics.

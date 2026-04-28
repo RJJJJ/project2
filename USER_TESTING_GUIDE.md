@@ -70,3 +70,16 @@ Regression checks:
 
 - Switching points still refreshes basket, candidates, local price-gap signals, historical signals, watchlist signals, and alert center data for the selected `point_code`.
 - Direct plan generation and selected-product generation both still work after changing points.
+
+## Senior-friendly simple-mode testing
+
+If no friends or family are available for a quick trial, first run `SENIOR_FRIENDLY_SELF_TEST.md`.
+
+When testing with users:
+
+- Start in `簡單模式`.
+- Observe whether the user understands the core flow within 30 seconds.
+- Watch whether they can choose a district, enter a shopping list, and click `幫我找最抵買法` without reading long instructions.
+- Check whether the first result card clearly answers: where to buy, total price, and why.
+- Only ask them to open `想指定品牌 / 規格？` if they naturally want to choose a specific product.
+- Switch to `進階模式` only when demonstrating the full MVP feature set.
