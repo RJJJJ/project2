@@ -118,9 +118,14 @@ const watchlistAlertItems = computed(() => watchlistAlerts.value?.alerts || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
 const isSimpleMode = computed(() => uiMode.value === 'simple')
 const simpleSignalItems = computed(() => signalItems.value.slice(0, 3))
-const selectedStoresText = computed(() => (selectedPlan.value?.stores || []).map((store) => store.supermarket_name || store.supermarket_oid).join('?'))
-const simpleRecommendationTitle = computed(() => selectedStoresText.value ? `?????${selectedStoresText.value}?` : '??????????')
-const simpleRecommendationReason = computed(() => basketResult.value?.recommendation_reason || '??????????????????????????')
+const selectedStoresText = computed(() =>
+  (selectedPlan.value?.stores || [])
+    .map((store) => store.supermarket_name)
+    .filter(Boolean)
+    .join('、'),
+)
+const simpleRecommendationTitle = computed(() => (selectedStoresText.value ? `推薦：${selectedStoresText.value}` : '推薦方案'))
+const simpleRecommendationReason = computed(() => basketResult.value?.recommendation_reason || '未能提供推薦原因。')
 const selectedProducts = computed(() =>
   candidateGroups.value
     .map((group) => ({
@@ -137,6 +142,21 @@ function planLabel(planType) {
 function money(value) {
   if (value === null || value === undefined) return 'N/A'
   return `${Number(value).toFixed(1)} MOP`
+}
+
+function formatSimpleItemLine(item) {
+  const packageQuantity = item?.package_quantity || '規格未提供'
+  const price = item?.unit_price_mop === null || item?.unit_price_mop === undefined ? 'N/A' : Number(item.unit_price_mop).toFixed(1)
+  const quantity = item?.requested_quantity || 1
+  return `${packageQuantity}｜${price} MOP × ${quantity}`
+}
+
+function simpleStoreText(item) {
+  return `在：${item?.supermarket_name || '未能確認超市'}`
+}
+
+function simpleStoreCountText(plan) {
+  return `要去 ${plan?.store_count ?? 0} 間店`
 }
 
 function percent(value) {
@@ -774,9 +794,9 @@ onMounted(async () => {
                 <article v-for="item in selectedPlan?.items || []" :key="`simple-item-${item.keyword}-${item.product_oid}`" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <h3 class="text-lg font-semibold leading-7 text-slate-950">{{ item.product_name || item.keyword }}</h3>
                   <div class="mt-3 space-y-2 text-base leading-7 text-slate-800">
-                    <div>{{ item.package_quantity || '規格未列明' }}?{{ money(item.unit_price_mop) }}<span v-if="item.requested_quantity"> ? {{ item.requested_quantity }}</span></div>
+                    <div>{{ formatSimpleItemLine(item) }}</div>
                     <div v-if="item.subtotal_mop !== null && item.subtotal_mop !== undefined" class="font-semibold">小計：{{ money(item.subtotal_mop) }}</div>
-                    <div>在：{{ item.supermarket_name || 'N/A' }}</div>
+                    <div>{{ simpleStoreText(item) }}</div>
                   </div>
                 </article>
               </div>
@@ -787,7 +807,7 @@ onMounted(async () => {
                 <article v-for="plan in otherPlans" :key="`simple-plan-${plan.plan_type}`" class="rounded-xl border border-slate-200 p-4">
                   <div class="text-base font-semibold text-slate-950">{{ planLabel(plan.plan_type) }}</div>
                   <div class="mt-2 text-2xl font-semibold text-slate-950">{{ money(plan.estimated_total_mop) }}</div>
-                  <div class="mt-1 text-base text-slate-700">要去 {{ plan.store_count ?? 0 }} 間店</div>
+                  <div class="mt-1 text-base text-slate-700">{{ simpleStoreCountText(plan) }}</div>
                 </article>
               </div>
             </section>
@@ -803,7 +823,7 @@ onMounted(async () => {
               <h3 class="text-lg font-semibold text-slate-950">{{ group.keyword }} x {{ group.quantity }}</h3>
               <div class="mt-3 grid gap-3">
                 <label class="flex cursor-pointer gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3"><input v-model="selectedCandidateOids[group.keyword]" type="radio" class="mt-1" :name="`simple-candidate-${group.keyword}`" value="" /><div><div class="font-medium text-slate-950">由系統自動選</div><div class="mt-1 text-sm text-slate-600">適合不想指定品牌或規格的情況。</div></div></label>
-                <label v-for="candidate in group.candidates" :key="`simple-${group.keyword}-${candidate.product_oid}`" class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input v-model="selectedCandidateOids[group.keyword]" type="radio" class="mt-1" :name="`simple-candidate-${group.keyword}`" :value="candidate.product_oid" /><div><div class="font-medium text-slate-950">{{ candidate.product_name }}</div><div class="mt-1 text-sm text-slate-700">{{ candidate.package_quantity || '規格未列明' }}?{{ money(candidate.min_price_mop) }} - {{ money(candidate.max_price_mop) }}</div></div></label>
+                <label v-for="candidate in group.candidates" :key="`simple-${group.keyword}-${candidate.product_oid}`" class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input v-model="selectedCandidateOids[group.keyword]" type="radio" class="mt-1" :name="`simple-candidate-${group.keyword}`" :value="candidate.product_oid" /><div><div class="font-medium text-slate-950">{{ candidate.product_name }}</div><div class="mt-1 text-sm text-slate-700">{{ candidate.package_quantity || '規格未提供' }}｜{{ money(candidate.min_price_mop) }} - {{ money(candidate.max_price_mop) }}</div></div></label>
               </div>
             </article>
             <button type="button" class="min-h-12 rounded-xl bg-emerald-700 px-5 text-base font-semibold text-white" :disabled="loadingBasket" @click="generatePlanWithSelectedProducts">{{ loadingBasket ? '正在幫你比較…' : '用以上商品選擇再找一次' }}</button>
