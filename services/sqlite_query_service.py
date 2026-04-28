@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
@@ -8,6 +8,7 @@ from services.sqlite_store import DEFAULT_DB_PATH
 from services.product_matching_rules import (
     candidate_text_match_score,
     expand_keyword,
+    is_forbidden_match,
 )
 
 
@@ -145,7 +146,10 @@ def search_product_candidates_for_point(
         item = _row_to_dict(row)
         min_price = float(item["min_price_mop"] or 0)
         store_count = int(item["store_count"] or 0)
+        forbidden = is_forbidden_match(normalized, item.get("product_name"), item.get("category_name"))
         match_score = candidate_text_match_score(normalized, item.get("product_name"), item.get("package_quantity"), item.get("category_name"))
+        if forbidden:
+            match_score -= 200
         coverage_score = float(store_count)
         price_score = -min_price * 0.01
         final_score = match_score * 100 + coverage_score * 5 + price_score
@@ -159,13 +163,14 @@ def search_product_candidates_for_point(
                     "final_score": round(final_score, 2),
                 },
                 "final_score": round(final_score, 2),
+                "forbidden_match": forbidden,
                 "is_recommended": False,
                 "recommendation_reason": "",
             }
         )
         scored.append(item)
 
-    filtered = [item for item in scored if float(item["match_score"]) >= -5.0]
+    filtered = [item for item in scored if not item.get("forbidden_match") and float(item["match_score"]) >= -5.0]
     if filtered:
         scored = filtered
 
@@ -248,3 +253,4 @@ def table_count(conn: sqlite3.Connection, table: str) -> int:
     if table not in {"collection_points", "products", "price_records", "supermarkets"}:
         raise ValueError(f"Unsupported table: {table}")
     return int(conn.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"])
+

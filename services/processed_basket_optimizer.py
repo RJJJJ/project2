@@ -286,17 +286,45 @@ def optimize_basket_cheapest_two_stores(
     }
 
 
+def _build_partial_best_effort_plan(cheapest_plan: dict[str, Any], requested_items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    matched_items = list(cheapest_plan.get("items") or [])
+    if not matched_items:
+        return None
+    matched_keywords = {str(item.get("keyword")) for item in matched_items}
+    unmatched_items = [
+        {"keyword": str(item.get("keyword")), "quantity": int(item.get("quantity", 1)), "matched": False}
+        for item in requested_items
+        if str(item.get("keyword")) not in matched_keywords
+    ]
+    plan = {
+        "plan_type": "partial_best_effort",
+        "estimated_total_mop": _plan_total(matched_items),
+        "store_count": len(_stores_from_items(matched_items)),
+        "stores": _stores_from_items(matched_items),
+        "items": matched_items,
+        "matched_items": matched_items,
+        "unmatched_items": unmatched_items,
+        "is_partial": bool(unmatched_items),
+        "recommendation_reason": "???????????????????????????",
+    }
+    return plan
+
+
 def optimize_basket(
     date: str,
     point_code: str,
     items: list[dict[str, Any]],
     processed_root: Path | None = None,
 ) -> dict[str, Any]:
+    cheapest_by_item = optimize_basket_cheapest_by_item(date, point_code, items, processed_root)
     plans = [
-        optimize_basket_cheapest_by_item(date, point_code, items, processed_root),
+        cheapest_by_item,
         optimize_basket_cheapest_single_store(date, point_code, items, processed_root),
         optimize_basket_cheapest_two_stores(date, point_code, items, processed_root),
     ]
+    partial_plan = _build_partial_best_effort_plan(cheapest_by_item, items)
+    if partial_plan and (partial_plan.get("is_partial") or not any(plan.get("items") for plan in plans[1:])):
+        plans.insert(0, partial_plan)
     warnings: list[str] = []
     for plan in plans:
         plan.pop("date", None)

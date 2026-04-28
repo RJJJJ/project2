@@ -3,31 +3,37 @@
 import re
 from typing import Any
 
-
-def _u(value: str) -> str:
-    return value
-
-
 KEYWORD_EXPANSIONS: dict[str, list[str]] = {
-    "\u7c73": ["\u7c73", "\u767d\u7c73", "\u73cd\u73e0\u7c73", "\u9999\u7c73", "\u7d72\u82d7\u7c73"],
-    "\u6d17\u982d\u6c34": ["\u6d17\u982d\u6c34", "\u6d17\u9aee\u9732", "\u6d17\u9aee\u6c34", "shampoo"],
-    "\u7d19\u5dfe": ["\u7d19\u5dfe", "\u62bd\u7d19", "\u5ec1\u7d19", "\u5377\u7d19", "\u76d2\u88dd\u7d19\u5dfe", "\u62b9\u624b\u7d19"],
-    "\u725b\u5976": ["\u725b\u5976", "\u9bae\u5976", "\u5976"],
-    "\u98df\u6cb9": ["\u98df\u6cb9", "\u82b1\u751f\u6cb9", "\u7c9f\u7c73\u6cb9", "\u82a5\u82b1\u7c7d\u6cb9", "\u6a44\u6b16\u6cb9"],
-    "\u7259\u818f": ["\u7259\u818f"],
-    "\u6d17\u8863\u6db2": ["\u6d17\u8863\u6db2", "\u6d17\u8863\u5291", "\u6d17\u8863\u9732"],
+    "米": ["米", "白米", "香米", "珍珠米", "絲苗米", "泰國香米", "金象米", "青靈芝香米"],
+    "麵": ["麵", "面", "公仔麵", "即食麵", "杯麵", "拉麵", "意粉", "通粉", "麵條"],
+    "米粉": ["米粉"],
+    "薯片": ["薯片", "potato chips", "chips", "樂事", "lay's", "lays", "pringles", "品客"],
+    "薯條": ["薯條", "fries", "冷凍薯條"],
+    "油": ["食油", "花生油", "粟米油", "芥花籽油", "橄欖油", "葵花籽油", "米糠油", "芥花油"],
+    "糖": ["白砂糖", "砂糖", "冰糖", "黃糖", "片糖", "糖"],
+    "紙巾": ["紙巾", "抽紙", "盒裝紙巾", "廁紙", "卷紙", "抹手紙", "衛生紙"],
+    "\u6d17\u982d\u6c34": ["\u6d17\u982d\u6c34", "\u6d17\u9aee\u9732", "\u6d17\u9aee\u6c34", "\u6d17\u9aee\u4e73", "shampoo"],
+    "牛奶": ["牛奶", "鮮奶", "全脂奶", "低脂奶", "脫脂奶"],
+    "牙膏": ["牙膏", "toothpaste"],
+    "洗衣液": ["洗衣液", "洗衣劑", "洗衣露", "洗衣粉"],
+    "M&M": ["M&M", "m&m", "M and M", "M&M's", "朱古力豆", "巧克力豆"],
 }
-
+ALIASES = {"\u98df\u6cb9": "\u6cb9", "\u767d\u7c73": "\u7c73", "\u9762": "\u9eb5", "\u516c\u4ed4\u9eb5": "\u9eb5", "\u5373\u98df\u9eb5": "\u9eb5", "\u676f\u9eb5": "\u9eb5", "\u6d17\u9aee\u9732": "\u6d17\u982d\u6c34", "\u6d17\u9aee\u6c34": "\u6d17\u982d\u6c34", "\u6d17\u9aee\u4e73": "\u6d17\u982d\u6c34", "m&m": "M&M", "m and m": "M&M"}
 NEGATIVE_TERMS: dict[str, list[str]] = {
-    "\u7c73": ["\u7c73\u7c89", "\u7389\u7c73", "\u7c73\u9905", "\u7c73\u901a", "\u7c73\u7dda", "\u7cd9\u7c73\u8336"],
-    "\u7d19\u5dfe": ["\u6fd5\u7d19\u5dfe", "\u6d88\u6bd2\u6fd5\u7d19\u5dfe", "\u842c\u7528\u6d88\u6bd2", "\u6fd5\u5dfe"],
-    "\u6d17\u982d\u6c34": ["\u6c90\u6d74\u9732", "\u6d17\u624b\u6db2", "\u8b77\u9aee\u7d20"],
-    "\u725b\u5976": ["\u5976\u7c89", "\u7149\u5976", "\u6930\u5976", "\u8c46\u5976"],
+    "米": ["米粉", "玉米", "粟米", "米餅", "米線", "米通", "糙米茶", "米漿", "米糊", "爆米花"],
+    "麵": ["米粉", "河粉", "粉絲", "米線"],
+    "米粉": ["白米", "香米", "珍珠米", "玉米", "粟米"],
+    "薯片": ["薯條", "fries", "冷凍薯條"],
+    "薯條": ["薯片", "chips", "pringles", "品客"],
+    "油": ["護髮油", "洗髮油", "精油", "bb油", "嬰兒油", "油污", "清潔劑", "機油"],
+    "糖": ["糖果", "朱古力", "巧克力", "口香糖", "糖水", "糖漿", "喉糖"],
+    "紙巾": ["濕紙巾", "消毒濕紙巾", "濕巾", "萬用消毒"],
+    "洗頭水": ["沐浴露", "洗手液", "護髮素", "潤髮乳", "護髮油"],
+    "牛奶": ["奶粉", "煉奶", "椰奶", "豆奶", "奶茶", "乳酪"],
+    "牙膏": ["牙刷", "漱口水", "牙線"],
+    "洗衣液": ["洗潔精", "洗手液", "沐浴露"],
+    "M&M": [],
 }
-
-RICE_POSITIVE_TERMS = ("\u767d\u7c73", "\u73cd\u73e0\u7c73", "\u9999\u7c73", "\u7d72\u82d7\u7c73", "\u8309\u8389\u9999\u7c73", "\u6cf0\u570b\u9999\u7c73")
-SHAMPOO_POSITIVE_TERMS = ("\u6d17\u982d\u6c34", "\u6d17\u9aee\u9732", "\u6d17\u9aee\u6c34", "shampoo")
-TISSUE_POSITIVE_TERMS = ("\u7d19\u5dfe", "\u62bd\u7d19", "\u5377\u7d19", "\u5ec1\u7d19", "\u76d2\u88dd\u7d19\u5dfe", "\u62b9\u624b\u7d19")
 
 
 def normalize_keyword(keyword: str) -> str:
@@ -35,24 +41,29 @@ def normalize_keyword(keyword: str) -> str:
 
 
 def _canonical_keyword(keyword: str) -> str:
-    normalized = normalize_keyword(keyword)
+    text = str(keyword or "").strip()
+    folded = text.casefold()
+    if text in KEYWORD_EXPANSIONS:
+        return text
+    if folded in ALIASES:
+        return ALIASES[folded]
+    if text in ALIASES:
+        return ALIASES[text]
     for canonical, terms in KEYWORD_EXPANSIONS.items():
-        if normalized == normalize_keyword(canonical) or normalized in {normalize_keyword(term) for term in terms}:
+        if folded in {normalize_keyword(t) for t in terms}:
             return canonical
-    return str(keyword or "").strip()
+    return text
 
 
 def expand_keyword(keyword: str) -> list[str]:
     canonical = _canonical_keyword(keyword)
-    terms = KEYWORD_EXPANSIONS.get(canonical, [str(keyword or "").strip()])
-    seen: set[str] = set()
-    expanded: list[str] = []
+    terms = [canonical] + KEYWORD_EXPANSIONS.get(canonical, [str(keyword or "").strip()])
+    seen: set[str] = set(); out: list[str] = []
     for term in terms:
-        normalized = normalize_keyword(term)
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            expanded.append(term)
-    return expanded
+        norm = normalize_keyword(term)
+        if norm and norm not in seen:
+            seen.add(norm); out.append(term)
+    return out
 
 
 def negative_terms_for_keyword(keyword: str) -> list[str]:
@@ -60,106 +71,74 @@ def negative_terms_for_keyword(keyword: str) -> list[str]:
 
 
 def _contains(text: Any, term: str) -> bool:
-    normalized = normalize_keyword(term)
-    return bool(normalized) and normalized in normalize_keyword(str(text or ""))
+    return normalize_keyword(term) in normalize_keyword(str(text or "")) if normalize_keyword(term) else False
 
 
-def _has_any(text: Any, terms: tuple[str, ...] | list[str]) -> bool:
+def _has_any(text: Any, terms: list[str] | tuple[str, ...]) -> bool:
     return any(_contains(text, term) for term in terms)
 
 
 def _parse_size(package_quantity: Any) -> tuple[float | None, str]:
     text = normalize_keyword(str(package_quantity or "")).replace(" ", "")
-    match = re.search(r"(\d+(?:\.\d+)?)(?:kg|公斤|\u516c\u65a4)", text)
-    if match:
-        return float(match.group(1)), "kg"
-    match = re.search(r"(\d+(?:\.\d+)?)(?:g|克|\u514b)", text)
-    if match:
-        return float(match.group(1)) / 1000.0, "kg"
-    match = re.search(r"(\d+(?:\.\d+)?)(?:ml|毫升|\u6beb\u5347)", text)
-    if match:
-        return float(match.group(1)), "ml"
-    match = re.search(r"(\d+(?:\.\d+)?)(?:l|升|\u5347)", text)
-    if match:
-        return float(match.group(1)) * 1000.0, "ml"
+    m = re.search(r"(\d+(?:\.\d+)?)(?:kg|公斤|公斤)", text)
+    if m: return float(m.group(1)), "kg"
+    m = re.search(r"(\d+(?:\.\d+)?)(?:g|克)", text)
+    if m: return float(m.group(1))/1000.0, "kg"
+    m = re.search(r"(\d+(?:\.\d+)?)(?:ml|毫升)", text)
+    if m: return float(m.group(1)), "ml"
+    m = re.search(r"(\d+(?:\.\d+)?)(?:l|升)", text)
+    if m: return float(m.group(1))*1000.0, "ml"
     return None, ""
 
 
-def package_preference_score(keyword: str, product_name: Any, package_quantity: Any) -> float:
+def is_forbidden_match(keyword: str, product_name: Any, category_name: Any = "") -> bool:
+    text = f"{product_name or ''} {category_name or ''}"
+    return _has_any(text, negative_terms_for_keyword(keyword))
+
+
+def package_preference_score(keyword: str, product_name: Any, package_quantity: Any = "") -> float:
     canonical = _canonical_keyword(keyword)
-    name = normalize_keyword(str(product_name or ""))
-    package = normalize_keyword(str(package_quantity or ""))
-    size, unit = _parse_size(package)
+    name = str(product_name or "")
+    size, unit = _parse_size(package_quantity)
     score = 0.0
-
-    if canonical == "\u7c73":
-        if _has_any(name, RICE_POSITIVE_TERMS):
-            score += 8.0
-        if _has_any(name, NEGATIVE_TERMS["\u7c73"]):
-            score -= 25.0
+    if canonical == "米":
+        if _has_any(name, ["白米", "珍珠米", "香米", "絲苗米", "泰國香米", "金象米", "青靈芝香米"]): score += 12
         if unit == "kg" and size is not None:
-            if size in {5.0, 8.0, 10.0, 25.0}:
-                score += 10.0
-            elif 4.0 <= size <= 10.0:
-                score += 7.0
-            elif size == 1.0:
-                score += 2.0
-            elif size < 1.0:
-                score -= 4.0
-        return score
-
-    if canonical == "\u6d17\u982d\u6c34":
-        if _has_any(name, SHAMPOO_POSITIVE_TERMS):
-            score += 10.0
-        if _has_any(name, NEGATIVE_TERMS["\u6d17\u982d\u6c34"]):
-            score -= 18.0
-        if unit == "ml" and size is not None:
-            if 500 <= size <= 1000:
-                score += 8.0
-            elif 300 <= size < 500:
-                score += 4.0
-            elif size < 200:
-                score -= 2.0
-        return score
-
-    if canonical == "\u7d19\u5dfe":
-        if _has_any(name, TISSUE_POSITIVE_TERMS):
-            score += 8.0
-        if _has_any(name, NEGATIVE_TERMS["\u7d19\u5dfe"]):
-            score -= 22.0
-        if _has_any(package, ("10\u5377", "12\u5377", "5\u5305", "6\u5305")) or _has_any(name, ("\u62bd", "\u5377\u7d19", "\u5ec1\u7d19")):
-            score += 7.0
-        return score
-
+            if 4 <= size <= 10 or size == 25: score += 10
+            elif size < 1: score -= 5
+    elif canonical == "洗頭水":
+        if unit == "ml" and size and 300 <= size <= 1200: score += 5
+    elif canonical in {"油", "牛奶"}:
+        if unit == "ml" and size and size >= 500: score += 3
     return score
 
 
 def candidate_text_match_score(keyword: str, product_name: Any, package_quantity: Any = "", category_name: Any = "") -> float:
-    normalized_keyword = normalize_keyword(keyword)
-    product = normalize_keyword(str(product_name or ""))
-    category = normalize_keyword(str(category_name or ""))
+    product = str(product_name or "")
+    category = str(category_name or "")
+    text = f"{product} {category}"
     score = 0.0
-
-    if normalized_keyword and normalized_keyword in product:
-        score += 8.0
-    if normalized_keyword and normalized_keyword in category:
-        score += 4.0
-
-    expanded = expand_keyword(keyword)
-    for term in expanded:
-        term_norm = normalize_keyword(term)
-        if not term_norm:
-            continue
-        if term_norm in product:
-            score += 6.0
-        elif term_norm in category:
-            score += 3.0
-
-    for term in negative_terms_for_keyword(keyword):
-        if _contains(product, term):
-            score -= 18.0
-        elif _contains(category, term):
-            score -= 8.0
-
-    score += package_preference_score(keyword, product_name, package_quantity)
+    canonical = _canonical_keyword(keyword)
+    for term in expand_keyword(canonical):
+        if _contains(product, term): score += 10 if normalize_keyword(term) == normalize_keyword(canonical) else 7
+        if _contains(category, term): score += 4
+    score += package_preference_score(canonical, product, package_quantity)
+    for term in negative_terms_for_keyword(canonical):
+        if _contains(product, term): score -= 50
+        elif _contains(category, term): score -= 20
+    if is_forbidden_match(canonical, product, category):
+        score -= 100
     return score
+
+
+def explain_match(keyword: str, product_name: Any, package_quantity: Any = "", category_name: Any = "") -> dict[str, Any]:
+    canonical = _canonical_keyword(keyword)
+    forbidden = is_forbidden_match(canonical, product_name, category_name)
+    return {
+        "keyword": keyword,
+        "canonical_keyword": canonical,
+        "expanded_terms": expand_keyword(canonical),
+        "negative_terms": negative_terms_for_keyword(canonical),
+        "forbidden_match": forbidden,
+        "match_score": round(candidate_text_match_score(canonical, product_name, package_quantity, category_name), 2),
+    }

@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from pathlib import Path
 from typing import Any
 
 from services.processed_data_loader import build_supermarket_lookup, load_price_records
-from services.product_aliases import expand_keyword
+from services.product_matching_rules import candidate_text_match_score, expand_keyword, is_forbidden_match, explain_match
 
 
 RICE = "\u7c73"
@@ -147,7 +147,9 @@ def search_product_candidates(
         if row.get("price_mop") is None:
             continue
         matched_alias = _row_match(row, aliases)
-        if matched_alias is None:
+        rule_score = candidate_text_match_score(keyword, row.get("product_name"), row.get("quantity"), row.get("category_name"))
+        forbidden = is_forbidden_match(keyword, row.get("product_name"), row.get("category_name"))
+        if matched_alias is None and rule_score <= 0:
             continue
         product_oid = row.get("product_oid")
         if product_oid is None:
@@ -164,7 +166,7 @@ def search_product_candidates(
             product_oid,
             {
                 "keyword": keyword,
-                "matched_alias": matched_alias,
+                "matched_alias": matched_alias or keyword,
                 "product_oid": product_oid,
                 "product_name": row.get("product_name"),
                 "package_quantity": row.get("quantity"),
@@ -173,15 +175,18 @@ def search_product_candidates(
                 "max_price_mop": price,
                 "_store_oids": set(),
                 "_sample_supermarkets": [],
-                "_match_score": _match_score(keyword, matched_alias, row.get("product_name"), row.get("category_name")),
+                "_match_score": max(_match_score(keyword, matched_alias, row.get("product_name"), row.get("category_name")), rule_score),
+                "_forbidden_match": forbidden,
             },
         )
         candidate["min_price_mop"] = min(float(candidate["min_price_mop"]), price)
         candidate["max_price_mop"] = max(float(candidate["max_price_mop"]), price)
         candidate["_match_score"] = max(
-            int(candidate["_match_score"]),
+            float(candidate["_match_score"]),
             _match_score(keyword, matched_alias, row.get("product_name"), row.get("category_name")),
+            rule_score,
         )
+        candidate["_forbidden_match"] = bool(candidate.get("_forbidden_match")) or forbidden
         if supermarket_oid is not None:
             candidate["_store_oids"].add(supermarket_oid)
         if supermarket_name and supermarket_name not in candidate["_sample_supermarkets"]:
@@ -190,7 +195,7 @@ def search_product_candidates(
     candidates: list[dict[str, Any]] = []
     for candidate in grouped.values():
         store_count = len(candidate["_store_oids"])
-        match_score = int(candidate["_match_score"])
+        match_score = float(candidate["_match_score"])
         coverage_score = min(store_count * 5, 50)
         package_score = _package_preference_score(
             keyword,
@@ -199,9 +204,12 @@ def search_product_candidates(
             candidate.get("matched_alias"),
         )
         price_score = _price_score(float(candidate["min_price_mop"]))
+        forbidden_match = bool(candidate.get("_forbidden_match"))
+        if forbidden_match:
+            match_score -= 200
         final_score = match_score + package_score + coverage_score + price_score
         ranking_factors = {
-            "match_score": match_score,
+            "match_score": round(match_score, 2),
             "coverage_score": coverage_score,
             "package_preference_score": package_score,
             "price_score": round(price_score, 2),
@@ -223,9 +231,14 @@ def search_product_candidates(
                 "is_recommended": False,
                 "recommendation_reason": "",
                 "ranking_factors": ranking_factors,
+                "match_score": ranking_factors["match_score"],
+                "final_score": ranking_factors["final_score"],
+                "forbidden_match": forbidden_match,
+                "match_explanation": explain_match(keyword, candidate.get("product_name"), candidate.get("package_quantity"), candidate.get("category_name")),
             }
         )
 
+    candidates = [item for item in candidates if not item.get("forbidden_match") or float(item["ranking_factors"]["final_score"]) > 0]
     candidates.sort(
         key=lambda item: (
             -float(item["ranking_factors"]["final_score"]),
@@ -240,3 +253,5 @@ def search_product_candidates(
         candidate["is_recommended"] = index == 0
         candidate["recommendation_reason"] = _recommendation_reason(candidate, cheapest_price) if index == 0 else ""
     return limited
+
+

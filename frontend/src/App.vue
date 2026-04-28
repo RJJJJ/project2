@@ -116,6 +116,8 @@ const historicalSignalWarnings = computed(() => historicalSignals.value?.warning
 const watchlistSignalItems = computed(() => watchlistSignals.value?.items || [])
 const watchlistAlertItems = computed(() => watchlistAlerts.value?.alerts || [])
 const hasPlan = computed(() => Boolean(selectedPlan.value?.items?.length))
+const selectedPlanUnmatchedItems = computed(() => selectedPlan.value?.unmatched_items || [])
+const selectedPlanMatchedItems = computed(() => selectedPlan.value?.matched_items || selectedPlan.value?.items || [])
 const isSimpleMode = computed(() => uiMode.value === 'simple')
 const simpleSignalItems = computed(() => signalItems.value.slice(0, 3))
 const selectedStoresText = computed(() =>
@@ -799,6 +801,13 @@ onMounted(async () => {
                     <div>{{ simpleStoreText(item) }}</div>
                   </div>
                 </article>
+              </div>
+              <div v-if="selectedPlanUnmatchedItems.length" class="mt-4 rounded-2xl bg-amber-50 p-4 text-base leading-7 text-amber-900">
+                <div class="font-semibold">????????</div>
+                <p class="mt-1">????????????????????????????????????????</p>
+                <ul class="mt-2 list-disc pl-5">
+                  <li v-for="item in selectedPlanUnmatchedItems" :key="`simple-unmatched-${item.keyword}`">{{ item.keyword }}</li>
+                </ul>
               </div>
             </section>
             <section v-if="otherPlans.length">

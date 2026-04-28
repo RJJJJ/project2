@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
@@ -9,7 +9,7 @@ from services.processed_data_loader import (
     load_price_records,
     load_supermarkets,
 )
-from services.product_aliases import expand_keyword
+from services.product_matching_rules import candidate_text_match_score, expand_keyword, is_forbidden_match
 
 
 def _matched_alias(row: dict[str, Any], aliases: list[str]) -> str | None:
@@ -55,7 +55,10 @@ def search_products(
     products: list[dict[str, Any]] = []
     for row in load_price_records(date, point_code, processed_root):
         matched_alias = _matched_alias(row, aliases)
-        if matched_alias is None:
+        score = candidate_text_match_score(keyword, row.get("product_name"), row.get("quantity"), row.get("category_name"))
+        if is_forbidden_match(keyword, row.get("product_name"), row.get("category_name")):
+            continue
+        if matched_alias is None and score < 7:
             continue
         product_oid = row.get("product_oid")
         if product_oid in seen:
@@ -85,14 +88,18 @@ def get_prices_for_keyword(
     seen: set[tuple[Any, Any, Any, Any]] = set()
     for row in load_price_records(date, point_code, processed_root):
         matched_alias = _matched_alias(row, aliases)
-        if matched_alias is None:
+        score = candidate_text_match_score(keyword, row.get("product_name"), row.get("quantity"), row.get("category_name"))
+        if is_forbidden_match(keyword, row.get("product_name"), row.get("category_name")):
+            continue
+        if matched_alias is None and score < 7:
             continue
         key = (row.get("product_oid"), row.get("supermarket_oid"), row.get("category_id"), row.get("point_code"))
         if key in seen:
             continue
         seen.add(key)
         output = dict(row)
-        output["matched_alias"] = matched_alias
+        output["matched_alias"] = matched_alias or keyword
+        output["match_score"] = round(score, 2)
         rows.append(output)
     lookup = build_supermarket_lookup(date, point_code, processed_root)
     return _join_supermarket_names(rows, lookup)
@@ -151,3 +158,4 @@ def get_point_overview(
         "top_10_cheapest_records": cheapest,
         "top_10_most_expensive_records": most_expensive,
     }
+

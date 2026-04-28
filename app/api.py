@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any
@@ -114,6 +114,10 @@ def _sqlite_basket_response(request: BasketAskRequest) -> dict[str, Any]:
         "store_count": len(stores_by_oid),
         "stores": list(stores_by_oid.values()),
         "items": plan_items,
+        "matched_items": [item for item in plan_items if item.get("matched") is not False],
+        "unmatched_items": [item for item in plan_items if item.get("matched") is False],
+        "is_partial": any(item.get("matched") is False for item in plan_items),
+        "recommendation_reason": "部分商品暫時未能匹配，以下先列出已找到商品的參考價格。",
     }
     return {
         "date": selected_date,
@@ -122,7 +126,7 @@ def _sqlite_basket_response(request: BasketAskRequest) -> dict[str, Any]:
         "plans": [plan],
         "warnings": basket.get("warnings", []),
         "recommended_plan_type": "sqlite_simple_basket",
-        "recommendation_reason": "SQLite prototype：根據商品匹配及最低價生成，未等同正式採購優化器。",
+        "recommendation_reason": "SQLite prototype: best-effort matched item prices.",
     }
 
 
@@ -351,3 +355,6 @@ def get_signals_text(
 ) -> dict[str, str]:
     signals = _signals_result(point_code, date, top_n)
     return {"text": format_signals_text(signals, top_n=top_n)}
+
+
+

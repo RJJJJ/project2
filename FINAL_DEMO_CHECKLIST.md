@@ -68,3 +68,12 @@
 - [ ] coverage report passed
 - [ ] SQLite import passed
 - [ ] data size reviewed before demo_data sync
+
+## Real-user query robustness
+
+- [ ] 空格分隔購物清單可解析
+- [ ] 中文數量如「兩包」「四包」可解析
+- [ ] M&M / C&S 不會令 parser crash
+- [ ] partial result 顯示為可用結果，不是系統錯誤
+- [ ] 米不優先匹配米粉 / 玉米 / 米餅 / 米線
+- [ ] 薯片與薯條不互相錯配

@@ -19,6 +19,22 @@ from services.processed_basket_optimizer import optimize_basket
 from services.shopping_text_parser import parse_shopping_text
 
 
+def _humanize_warnings(warnings: list[str]) -> list[str]:
+    human: list[str] = []
+    for warning in warnings:
+        text = str(warning)
+        if text.startswith("No price records found for keyword:"):
+            keyword = text.split("keyword:", 1)[1].split(".", 1)[0].strip()
+            human.append(f"\u300c{keyword}\u300d\u66ab\u6642\u672a\u80fd\u5728\u8cc7\u6599\u4e2d\u627e\u5230\uff0c\u8acb\u8a66\u8a66\u8f38\u5165\u66f4\u5177\u9ad4\u540d\u7a31\u3002")
+        elif "No single store" in text:
+            human.append("\u6c92\u6709\u55ae\u4e00\u8d85\u5e02\u627e\u9f4a\u6240\u6709\u5546\u54c1\uff0c\u5df2\u5617\u8a66\u5176\u4ed6\u7d44\u5408\u3002")
+        elif "No one-store or two-store" in text:
+            human.append("\u6c92\u6709\u4e00\u81f3\u5169\u9593\u8d85\u5e02\u53ef\u627e\u9f4a\u6240\u6709\u5546\u54c1\uff0c\u5df2\u5148\u5217\u51fa\u627e\u5230\u5546\u54c1\u7684\u53c3\u8003\u50f9\u683c\u3002")
+        else:
+            human.append(text)
+    return list(dict.fromkeys(human))
+
+
 def build_result(
     date: str,
     point_code: str,
@@ -40,6 +56,7 @@ def build_result(
                 item["selected_product_oid"] = selected_product_oid
     result = optimize_basket(date, point_code, items, processed_root)
     result["parsed_items"] = items
+    result["warnings"] = _humanize_warnings(result.get("warnings", []))
     result.update(recommend_plan(result["plans"], convenience_threshold))
     return result
 

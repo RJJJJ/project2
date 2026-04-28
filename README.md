@@ -383,3 +383,13 @@ python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.o
 cd frontend
 npm.cmd run build
 ```
+
+## Friend testing script
+
+Use messy real-user inputs during friend testing, for example:
+
+```text
+兩包麵 一包薯條 四包薯片 油 糖 M&M
+```
+
+Expected behavior: the system should parse space-separated items, show any partial result it can find, and explain missing items in plain language. Missing every requested product is a data/matching limitation, not a frontend system error. More specific names such as `食油`, `薯片`, and `白米` usually work better than very broad words.
