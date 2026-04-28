@@ -34,9 +34,18 @@ def _status(
     ambiguous_items: list[dict[str, Any]],
     not_covered_items: list[dict[str, Any]],
     unknown_items: list[dict[str, Any]],
+    price_plan: dict[str, Any] | None = None,
 ) -> str:
     if ambiguous_items:
         return "needs_clarification"
+    if price_plan:
+        price_status = price_plan.get("status")
+        if resolved_items and price_status == "ok" and not not_covered_items and not unknown_items:
+            return "ok"
+        if resolved_items and price_status in {"ok", "partial", "needs_clarification"} and (not_covered_items or unknown_items):
+            return "partial"
+        if not resolved_items and not_covered_items:
+            return "not_covered"
     if resolved_items and (not_covered_items or unknown_items):
         return "partial"
     if not resolved_items and not_covered_items and not ambiguous_items and not unknown_items:
@@ -81,6 +90,9 @@ def run_shopping_agent(
     point_code: str | None = None,
     use_llm: bool = False,
     debug: bool = False,
+    include_price_plan: bool = False,
+    price_strategy: str = "cheapest_single_store",
+    max_candidates_per_item: int = 5,
 ) -> dict[str, Any]:
     try:
         parsed_items = parse_simple_basket_text(query)
@@ -122,8 +134,9 @@ def run_shopping_agent(
             else:
                 unknown_items.append(enriched | {"risky": True})
 
+        price_plan = None
         status = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items)
-        return {
+        result = {
             "query": query,
             "point_code": point_code,
             "use_llm": use_llm,
@@ -145,6 +158,20 @@ def run_shopping_agent(
                 "debug": bool(debug),
             },
         }
+        if include_price_plan:
+            from services.shopping_agent_price_adapter import build_agent_price_plan
+
+            price_plan = build_agent_price_plan(
+                result,
+                db_path,
+                point_code=point_code,
+                strategy=price_strategy,
+                max_candidates_per_item=max_candidates_per_item,
+            )
+            result["price_plan"] = price_plan
+            result["status"] = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, price_plan)
+            result["diagnostics"]["price_plan_status"] = price_plan.get("status")
+        return result
     except Exception as exc:  # pragma: no cover - defensive API boundary
         return {
             "query": query,

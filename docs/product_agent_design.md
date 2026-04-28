@@ -5,14 +5,14 @@ shopping-decision agent:
 
 `User Query -> planner-style parsing -> rule-first intent taxonomy -> ambiguity /
 not-covered detection -> controlled candidate retrieval -> deterministic SQL
-price optimizer -> grounded response`
+price planning -> grounded response`
 
 ## Why not pure keyword matching
 
-Product names contain many misleading substrings. For example, `糖` can appear in
-`低糖豆奶`, `油` can appear in `麻油味即食麵`, and `雞蛋` can appear in `雞蛋幼面`.
-Plain `product_name contains keyword` therefore creates confident but wrong
-recommendations.
+Product names contain misleading substrings. For example, "sugar" intent can be
+confused with low-sugar soy milk, "oil" can appear in noodle flavors or sauces,
+and "egg" can appear in egg noodles. Plain `product_name contains keyword`
+therefore creates confident but wrong recommendations.
 
 ## Why not pure RAG
 
@@ -23,43 +23,26 @@ matching and optimization must be auditable Python / SQL.
 
 ## Rule-first + RAG-assisted + LLM-planned architecture
 
-The first stabilizing layer is `services/product_intent_taxonomy.py`. It defines
-known product intents, positive terms, negative terms, category allowlists, and
-known not-covered queries.
+The stabilizing layers are:
 
-The resolver in `services/product_intent_resolver.py` classifies each parsed item
-as:
-
-- `covered`
-- `ambiguous`
-- `not_covered`
-- `unknown`
-
-The retriever in `services/product_candidate_retriever.py` only returns products
-that match the resolved intent rules. This prevents obvious false positives such
-as low-sugar soy milk for cooking sugar.
-
-The orchestrator in `services/shopping_agent_orchestrator.py` combines the
-existing basket parser with the intent resolver and controlled retriever. It is
-LLM-ready, but the current implementation runs without an LLM key.
+1. `services/product_intent_taxonomy.py` defines known intents, positive terms,
+   negative terms, category allowlists, ambiguity rules, and not-covered terms.
+2. `services/product_intent_resolver.py` classifies each parsed item as
+   `covered`, `ambiguous`, `not_covered`, or `unknown`.
+3. `services/product_candidate_retriever.py` returns only products that satisfy
+   the resolved intent rules.
+4. `services/shopping_agent_orchestrator.py` combines the existing basket parser
+   with the resolver and retriever. It is LLM-ready, but runs without an LLM key.
 
 ## Ambiguity handling
 
-Some user terms are intentionally ambiguous:
-
-- `糖`: cooking sugar or candy
-- `油`: cooking oil or seasoning oil
-- `朱古力`: drink or snack
-- `紙巾`: dry tissue or wet wipe
-- `麵`: instant noodle, pasta, or dry noodle
-- `米`: rice or rice noodle
-
-The agent returns `needs_clarification` instead of forcing a possibly wrong
-match.
+Terms such as sugar, oil, chocolate, tissue, noodle, rice, and milk can refer to
+multiple monitored product classes. The agent returns `needs_clarification`
+instead of forcing a possibly wrong match.
 
 ## Not-covered messaging
 
-Known not-covered queries such as `M&M`, `薯條`, and `雞蛋` return a clear message:
+Known not-covered queries such as M&M, fries, and eggs return a clear message:
 the public Consumer Council monitored dataset currently has no comparable price
 record for that item. This does not mean the supermarket does not sell it.
 
@@ -74,8 +57,27 @@ Future LLM usage should be limited to:
 The LLM must not calculate prices, choose stores without SQL evidence, or invent
 candidate products.
 
+## Phase 2: deterministic pricing from resolved candidates
+
+Phase 2 connects resolved agent candidates back to deterministic price planning:
+
+1. The agent resolves only covered items into product intents.
+2. The retriever attaches candidate products from the SQLite product catalog.
+3. `services/shopping_agent_price_adapter.py` converts resolved items and top
+   candidate products into priceable items.
+4. `services/product_oid_price_planner.py` reads `price_records` directly and
+   builds cheapest same-store plans by product OID.
+
+Ambiguous and not-covered items stay in the response and do not participate in
+price calculation. This allows partial pricing for already-resolved items while
+still asking the user to clarify unsafe items.
+
+`point_code` is required for price planning because supermarket availability and
+price records are scoped to a collection point. Without a point, the agent can
+still resolve product intents, but it cannot produce a grounded local price plan.
+
 ## Future LLM hook
 
-`run_shopping_agent(..., use_llm=True)` is intentionally reserved for a future
-planner/composer hook. If no key is available, the current rule-first path still
-works and remains the safe fallback.
+`run_shopping_agent(..., use_llm=True)` is reserved for a future planner/composer
+hook. If no key is available, the current rule-first path still works and remains
+the safe fallback.

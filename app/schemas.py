@@ -24,6 +24,8 @@ class ShoppingAgentRequest(BaseModel):
     query: str
     point_code: str | None = None
     use_llm: bool = False
+    include_price_plan: bool = False
+    price_strategy: str = "cheapest_single_store"
 
 
 class BasketAskResponse(BaseModel):

@@ -21,6 +21,9 @@ def main() -> int:
     parser.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
     parser.add_argument("--point-code")
     parser.add_argument("--use-llm", action="store_true")
+    parser.add_argument("--include-price-plan", action="store_true")
+    parser.add_argument("--price-strategy", default="cheapest_single_store")
+    parser.add_argument("--max-candidates-per-item", type=int, default=5)
     parser.add_argument("--debug-json", action="store_true")
     args = parser.parse_args()
 
@@ -30,6 +33,9 @@ def main() -> int:
         point_code=args.point_code,
         use_llm=args.use_llm,
         debug=args.debug_json,
+        include_price_plan=args.include_price_plan,
+        price_strategy=args.price_strategy,
+        max_candidates_per_item=args.max_candidates_per_item,
     )
     if args.debug_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
