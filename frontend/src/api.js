@@ -142,6 +142,11 @@ export async function runShoppingAgent({
   includePricePlan = true,
   priceStrategy = 'cheapest_single_store',
   clarificationAnswers = undefined,
+  plannerMode = 'rule',
+  localLlmModel = null,
+  localLlmEndpoint = null,
+  retrievalMode = 'taxonomy',
+  composerMode = 'template',
 } = {}) {
   const trimmedQuery = String(query || '').trim()
   if (!trimmedQuery) {
@@ -161,6 +166,11 @@ export async function runShoppingAgent({
       ...(clarificationAnswers && Object.keys(clarificationAnswers).length
         ? { clarification_answers: clarificationAnswers }
         : {}),
+      planner_mode: plannerMode,
+      local_llm_model: localLlmModel,
+      local_llm_endpoint: localLlmEndpoint,
+      retrieval_mode: retrievalMode,
+      composer_mode: composerMode,
     }),
   })
 

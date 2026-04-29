@@ -27,6 +27,11 @@ class ShoppingAgentRequest(BaseModel):
     include_price_plan: bool = False
     price_strategy: str = "cheapest_single_store"
     clarification_answers: dict[str, str] | None = None
+    planner_mode: str = "rule"
+    local_llm_model: str | None = None
+    local_llm_endpoint: str | None = None
+    retrieval_mode: str = "taxonomy"
+    composer_mode: str = "template"
 
 
 class BasketAskResponse(BaseModel):

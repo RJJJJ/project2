@@ -228,6 +228,11 @@ def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
         include_price_plan=request.include_price_plan,
         price_strategy=request.price_strategy,
         clarification_answers=request.clarification_answers,
+        planner_mode=request.planner_mode,
+        local_llm_model=request.local_llm_model,
+        local_llm_endpoint=request.local_llm_endpoint,
+        retrieval_mode=request.retrieval_mode,
+        composer_mode=request.composer_mode,
     )
 
 

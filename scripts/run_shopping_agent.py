@@ -25,6 +25,11 @@ def main() -> int:
     parser.add_argument("--price-strategy", default="cheapest_single_store")
     parser.add_argument("--max-candidates-per-item", type=int, default=5)
     parser.add_argument("--debug-json", action="store_true")
+    parser.add_argument("--planner-mode", default="rule", choices=["rule", "local_llm"])
+    parser.add_argument("--local-llm-model", default=None)
+    parser.add_argument("--local-llm-endpoint", default=None)
+    parser.add_argument("--retrieval-mode", default="taxonomy", choices=["taxonomy", "rag_assisted"])
+    parser.add_argument("--composer-mode", default="template", choices=["template", "gemini"])
     args = parser.parse_args()
 
     result = run_shopping_agent(
@@ -36,6 +41,11 @@ def main() -> int:
         include_price_plan=args.include_price_plan,
         price_strategy=args.price_strategy,
         max_candidates_per_item=args.max_candidates_per_item,
+        planner_mode=args.planner_mode,
+        local_llm_model=args.local_llm_model,
+        local_llm_endpoint=args.local_llm_endpoint,
+        retrieval_mode=args.retrieval_mode,
+        composer_mode=args.composer_mode,
     )
     if args.debug_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
