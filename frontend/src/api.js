@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+﻿const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 async function request(path, options = {}) {
   const endpoint = `${API_BASE_URL}${path}`
@@ -133,4 +133,43 @@ export function clearUserAlertHistory(userToken) {
   return request(`/api/user/alert-history?${params.toString()}`, {
     method: 'DELETE',
   })
+}
+
+export async function runShoppingAgent({
+  query,
+  pointCode = null,
+  useLlm = false,
+  includePricePlan = true,
+  priceStrategy = 'cheapest_single_store',
+  clarificationAnswers = undefined,
+} = {}) {
+  const trimmedQuery = String(query || '').trim()
+  if (!trimmedQuery) {
+    const apiError = new Error('\u8acb\u5148\u8f38\u5165\u8cfc\u7269\u6e05\u55ae\u3002')
+    apiError.status = 400
+    throw apiError
+  }
+
+  const data = await request('/api/agent/shopping', {
+    method: 'POST',
+    body: JSON.stringify({
+      query: trimmedQuery,
+      point_code: pointCode,
+      use_llm: Boolean(useLlm),
+      include_price_plan: Boolean(includePricePlan),
+      price_strategy: priceStrategy,
+      ...(clarificationAnswers && Object.keys(clarificationAnswers).length
+        ? { clarification_answers: clarificationAnswers }
+        : {}),
+    }),
+  })
+
+  if (!data || typeof data !== 'object' || typeof data.status !== 'string') {
+    const apiError = new Error('\u5f8c\u7aef\u56de\u50b3\u683c\u5f0f\u4e0d\u6b63\u78ba\u3002')
+    apiError.status = null
+    apiError.payload = data
+    throw apiError
+  }
+
+  return data
 }

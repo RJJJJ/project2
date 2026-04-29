@@ -227,6 +227,7 @@ def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
         use_llm=request.use_llm,
         include_price_plan=request.include_price_plan,
         price_strategy=request.price_strategy,
+        clarification_answers=request.clarification_answers,
     )
 
 

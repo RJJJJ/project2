@@ -15,6 +15,7 @@ import {
   removeUserWatchlistItem,
   setUserAlertStatus,
 } from './api'
+import ShoppingAgentBox from './components/ShoppingAgentBox.vue'
 
 const defaultText = '我想買一包米、兩支洗頭水、一包紙巾'
 const WATCHLIST_STORAGE_KEY = 'macau-shopping-watchlist-v1'
@@ -849,6 +850,8 @@ onMounted(async () => {
           <p v-else class="mt-4 text-base text-slate-600">暫時沒有明顯價差訊號。</p>
         </article>
       </section>
+
+      <ShoppingAgentBox :point-code="pointCode" :selected-point-name="selectedPoint?.name || ''" />
 
       <details v-if="uiMode === 'advanced'" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" open>
         <summary class="cursor-pointer text-base font-semibold text-slate-950">如何使用</summary>
