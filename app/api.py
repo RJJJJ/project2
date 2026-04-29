@@ -1,6 +1,8 @@
 ﻿from __future__ import annotations
 
 from copy import deepcopy
+import os
+import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -41,6 +43,7 @@ from services.sqlite_query_service import (
     search_product_candidates_for_point as sqlite_search_product_candidates_for_point,
 )
 from services.shopping_agent_orchestrator import run_shopping_agent
+from services.agent_observability import append_agent_observation_jsonl, build_agent_observation
 
 
 router = APIRouter(prefix="/api")
@@ -220,7 +223,8 @@ def ask_basket(request: BasketAskRequest) -> dict[str, Any]:
 @router.post("/agent/shopping")
 def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
     db_path = get_sqlite_db_path()
-    return run_shopping_agent(
+    started_at = time.time()
+    result = run_shopping_agent(
         request.query,
         db_path,
         point_code=request.point_code,
@@ -233,7 +237,13 @@ def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
         local_llm_endpoint=request.local_llm_endpoint,
         retrieval_mode=request.retrieval_mode,
         composer_mode=request.composer_mode,
+        decision_policy=request.decision_policy or request.price_strategy,
+        decision_policy_options=request.decision_policy_options,
     )
+    if os.getenv("PROJECT2_AGENT_OBSERVABILITY_LOG") == "1":
+        output_path = os.getenv("PROJECT2_AGENT_OBSERVABILITY_PATH", "data/logs/agent_observations.jsonl")
+        append_agent_observation_jsonl(build_agent_observation(result, started_at=started_at, ended_at=time.time()), output_path)
+    return result
 
 
 @router.get("/products/candidates")

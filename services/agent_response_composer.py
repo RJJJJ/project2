@@ -12,7 +12,9 @@ def compose_agent_response_template(agent_result: dict) -> str:
     resolved_items = list(agent_result.get("resolved_items") or [])
     ambiguous_items = list(agent_result.get("ambiguous_items") or [])
     not_covered_items = list(agent_result.get("not_covered_items") or [])
-    best_plan = ((agent_result.get("price_plan") or {}).get("best_plan") or {})
+    price_plan = agent_result.get("price_plan") or {}
+    decision_result = price_plan.get("decision_result") or {}
+    best_plan = (decision_result.get("best_recommendation") or price_plan.get("best_plan") or {})
 
     parts: list[str] = []
     if status == "ok":

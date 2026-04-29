@@ -141,6 +141,8 @@ export async function runShoppingAgent({
   useLlm = false,
   includePricePlan = true,
   priceStrategy = 'cheapest_single_store',
+  decisionPolicy = 'cheapest_single_store',
+  decisionPolicyOptions = null,
   clarificationAnswers = undefined,
   plannerMode = 'rule',
   localLlmModel = null,
@@ -163,6 +165,8 @@ export async function runShoppingAgent({
       use_llm: Boolean(useLlm),
       include_price_plan: Boolean(includePricePlan),
       price_strategy: priceStrategy,
+      decision_policy: decisionPolicy,
+      decision_policy_options: decisionPolicyOptions,
       ...(clarificationAnswers && Object.keys(clarificationAnswers).length
         ? { clarification_answers: clarificationAnswers }
         : {}),

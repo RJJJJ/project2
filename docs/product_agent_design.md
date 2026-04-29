@@ -170,3 +170,100 @@ Gemini composer with template fallback:
 ```bash
 python scripts/run_shopping_agent.py   --query "?????????"   --db-path data/app_state/project2_dev.sqlite3   --point-code p001   --include-price-plan   --composer-mode gemini   --debug-json
 ```
+
+
+## Phase 4: Decision Intelligence + Evaluation + Production Hardening
+
+### Decision Policy Layer
+
+Phase 4 adds `services/shopping_decision_policy.py` as a deterministic policy layer around the existing product-OID price planner. The public functions are:
+
+- `build_decision_result(price_plan, policy, policy_options)`
+- `compare_store_plans(store_plans, policy, policy_options)`
+- `summarize_decision_result(decision_result)`
+
+The old `price_plan.best_plan` remains compatible with the existing one-store UI. New recommendations are exposed at `price_plan.decision_result.best_recommendation`.
+
+### `cheapest_two_stores` algorithm
+
+`plan_cheapest_by_product_candidates_two_stores(...)` keeps the existing single-store planner intact and adds a small deterministic enumerator:
+
+1. For each resolved priceable item, find the lowest-priced candidate product available in each supermarket.
+2. Enumerate every one-store and two-store combination near the selected collection point.
+3. For every item, choose the cheaper available store within that pair.
+4. Keep only complete plans covering all priceable items.
+5. Sort by estimated total, store count, and stable store identifiers.
+
+The algorithm is intentionally simple because the expected store count near `p001` is small.
+
+### `single_store_preferred`
+
+This policy compares the best one-store plan and best max-two-store plan. By default, if the two-store plan is cheaper by **MOP 5.0 or less**, the system still recommends one store to reduce user effort. Override with:
+
+```json
+{ "single_store_threshold_mop": 5.0 }
+```
+
+### `balanced`
+
+This policy scores complete one-/two-store plans with:
+
+```text
+score = estimated_total_mop + (store_count - 1) * extra_store_penalty_mop
+```
+
+The raw price remains in `estimated_total_mop`; the policy score is exposed only in diagnostics/debug surfaces. Default option:
+
+```json
+{ "extra_store_penalty_mop": 5.0 }
+```
+
+### Why LLM does not make price decisions
+
+LLM components may parse shopping text or compose a user-readable explanation, but they must not calculate totals, select the cheapest plan, or override deterministic policy results. The Gemini composer prompt explicitly treats `price_plan.decision_result` as authoritative and forbids changing the recommendation, total, store count, or alternatives.
+
+### Regression pack
+
+`scripts/run_agent_regression_pack.py` runs fixed guardrail and acceptance queries for sugar/oil/noodle/chocolate/tissue ambiguity, not-covered items, RAG pollution checks, and price-plan availability.
+
+Example:
+
+```powershell
+python scripts\run_agent_regression_pack.py --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --output-dir data\eval
+```
+
+Outputs:
+
+- `data/eval/agent_regression_results.json`
+- `data/eval/agent_regression_summary.md`
+
+### Observability JSONL
+
+`services/agent_observability.py` builds compact structured observations containing planner/retrieval/composer modes, decision policy, price status, counts, totals, selected store count, latency, warnings, and errors.
+
+CLI opt-in:
+
+```powershell
+python scripts\run_shopping_agent.py --query "我想買砂糖同洗頭水" --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --include-price-plan --decision-policy balanced --log-observation --observation-log-path data\logs\agent_observations.jsonl --debug-json
+```
+
+API logging is disabled by default. It can be enabled with `PROJECT2_AGENT_OBSERVABILITY_LOG=1` and optionally `PROJECT2_AGENT_OBSERVABILITY_PATH`.
+
+### CLI examples
+
+```powershell
+python scripts\run_shopping_agent.py --query "我想買砂糖同洗頭水" --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --include-price-plan --decision-policy cheapest_single_store --debug-json
+python scripts\run_shopping_agent.py --query "我想買砂糖同洗頭水" --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --include-price-plan --decision-policy cheapest_two_stores --debug-json
+python scripts\run_shopping_agent.py --query "我想買食油、朱古力飲品、牙膏" --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --include-price-plan --decision-policy balanced --extra-store-penalty-mop 5 --debug-json
+```
+
+### Frontend decision policy selector
+
+The Agent advanced controls now include Decision Policy:
+
+- 最平一間店 (`cheapest_single_store`)
+- 最平最多兩間店 (`cheapest_two_stores`)
+- 優先一間店 (`single_store_preferred`)
+- 平衡價格與少走路 (`balanced`)
+
+Normal mode shows user-facing store names, store count, totals, item purchase locations, explanation text, and up to two alternatives. Debug mode shows policy diagnostics and raw `decision_result`. Internal `product_oid`, `supermarket_oid`, and intent IDs remain debug-only implementation details.

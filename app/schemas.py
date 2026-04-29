@@ -26,6 +26,8 @@ class ShoppingAgentRequest(BaseModel):
     use_llm: bool = False
     include_price_plan: bool = False
     price_strategy: str = "cheapest_single_store"
+    decision_policy: str = "cheapest_single_store"
+    decision_policy_options: dict[str, Any] | None = None
     clarification_answers: dict[str, str] | None = None
     planner_mode: str = "rule"
     local_llm_model: str | None = None

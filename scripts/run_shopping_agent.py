@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from services.shopping_agent_orchestrator import run_shopping_agent
+from services.agent_observability import append_agent_observation_jsonl, build_agent_observation
 from services.sqlite_store import DEFAULT_DB_PATH
 
 
@@ -23,6 +25,9 @@ def main() -> int:
     parser.add_argument("--use-llm", action="store_true")
     parser.add_argument("--include-price-plan", action="store_true")
     parser.add_argument("--price-strategy", default="cheapest_single_store")
+    parser.add_argument("--decision-policy", default="cheapest_single_store", choices=["cheapest_single_store", "cheapest_two_stores", "single_store_preferred", "balanced"])
+    parser.add_argument("--single-store-threshold-mop", type=float, default=5.0)
+    parser.add_argument("--extra-store-penalty-mop", type=float, default=5.0)
     parser.add_argument("--max-candidates-per-item", type=int, default=5)
     parser.add_argument("--debug-json", action="store_true")
     parser.add_argument("--planner-mode", default="rule", choices=["rule", "local_llm"])
@@ -30,8 +35,15 @@ def main() -> int:
     parser.add_argument("--local-llm-endpoint", default=None)
     parser.add_argument("--retrieval-mode", default="taxonomy", choices=["taxonomy", "rag_assisted"])
     parser.add_argument("--composer-mode", default="template", choices=["template", "gemini"])
+    parser.add_argument("--log-observation", action="store_true")
+    parser.add_argument("--observation-log-path", default="data/logs/agent_observations.jsonl")
     args = parser.parse_args()
 
+    decision_policy_options = {
+        "single_store_threshold_mop": args.single_store_threshold_mop,
+        "extra_store_penalty_mop": args.extra_store_penalty_mop,
+    }
+    started_at = time.time()
     result = run_shopping_agent(
         args.query,
         Path(args.db_path),
@@ -46,7 +58,15 @@ def main() -> int:
         local_llm_endpoint=args.local_llm_endpoint,
         retrieval_mode=args.retrieval_mode,
         composer_mode=args.composer_mode,
+        decision_policy=args.decision_policy,
+        decision_policy_options=decision_policy_options,
     )
+    ended_at = time.time()
+    if args.log_observation:
+        append_agent_observation_jsonl(
+            build_agent_observation(result, started_at=started_at, ended_at=ended_at),
+            args.observation_log_path,
+        )
     if args.debug_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:

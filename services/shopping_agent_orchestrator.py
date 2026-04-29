@@ -142,7 +142,7 @@ def _exploratory_unknown_candidates(products: list[dict[str, Any]], raw_name: st
     return rag_assisted_retrieve_candidates(products, query=raw_name, intent_id=None, limit=3)
 
 
-def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template") -> dict[str, Any]:
+def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template", decision_policy: str | None = None, decision_policy_options: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
         products = load_products_from_sqlite(db_path)
         parsed_items, planner_output, planner_errors, planner_used = _plan_items(query, planner_mode=planner_mode, local_llm_model=local_llm_model, local_llm_endpoint=local_llm_endpoint)
@@ -215,6 +215,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             "rag_used": rag_used,
             "rag_candidate_counts": rag_candidate_counts,
             "composer_mode": normalized_composer_mode,
+            "decision_policy": decision_policy or price_strategy,
         }
         if debug:
             diagnostics["planner_output"] = planner_output
@@ -222,7 +223,15 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
         result = {"query": query, "point_code": point_code, "use_llm": use_llm, "status": status, "resolved_items": resolved_items, "ambiguous_items": ambiguous_items, "not_covered_items": not_covered_items, "unknown_items": unknown_items, "candidate_summary": candidate_summary, "warnings": warnings, "diagnostics": diagnostics}
         if include_price_plan:
             from services.shopping_agent_price_adapter import build_agent_price_plan
-            price_plan = build_agent_price_plan(result, db_path, point_code=point_code, strategy=price_strategy, max_candidates_per_item=max_candidates_per_item)
+            price_plan = build_agent_price_plan(
+                result,
+                db_path,
+                point_code=point_code,
+                strategy=price_strategy,
+                max_candidates_per_item=max_candidates_per_item,
+                decision_policy=decision_policy or price_strategy,
+                decision_policy_options=decision_policy_options,
+            )
             result["price_plan"] = price_plan
             result["status"] = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, price_plan)
             result["diagnostics"]["price_plan_status"] = price_plan.get("status")

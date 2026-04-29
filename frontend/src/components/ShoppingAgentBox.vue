@@ -29,6 +29,9 @@ const copy = {
   plannerMode: 'Planner Mode',
   retrievalMode: 'Retrieval Mode',
   composerMode: 'Composer Mode',
+  decisionPolicy: '採購策略 / Decision Policy',
+  thresholdLabel: '兩店方案便宜不超過多少 MOP 時，仍建議一間店',
+  penaltyLabel: '每多去一間店，視作額外成本 MOP',
 }
 
 const query = ref('')
@@ -41,6 +44,9 @@ const lastSubmittedQuery = ref('')
 const plannerMode = ref('rule')
 const retrievalMode = ref('taxonomy')
 const composerMode = ref('template')
+const decisionPolicy = ref('cheapest_single_store')
+const singleStoreThresholdMop = ref(5)
+const extraStorePenaltyMop = ref(5)
 
 const effectivePointCode = computed(() => props.pointCode || 'p001')
 const selectedClarificationPayload = computed(() => {
@@ -51,6 +57,11 @@ const selectedClarificationPayload = computed(() => {
   return payload
 })
 const canRecalculate = computed(() => !loading.value && Object.keys(selectedClarificationPayload.value).length > 0)
+const decisionPolicyOptions = computed(() => {
+  if (decisionPolicy.value === 'single_store_preferred') return { single_store_threshold_mop: Number(singleStoreThresholdMop.value) || 5 }
+  if (decisionPolicy.value === 'balanced') return { extra_store_penalty_mop: Number(extraStorePenaltyMop.value) || 5 }
+  return null
+})
 
 function readableAgentError(err) {
   if (err?.status === 400) return err.message || copy.inputError
@@ -75,6 +86,8 @@ async function submitAgent({ useClarifications = false } = {}) {
       useLlm: false,
       includePricePlan: true,
       priceStrategy: 'cheapest_single_store',
+      decisionPolicy: decisionPolicy.value,
+      decisionPolicyOptions: decisionPolicyOptions.value,
       clarificationAnswers: useClarifications ? selectedClarificationPayload.value : undefined,
       plannerMode: plannerMode.value,
       retrievalMode: retrievalMode.value,
@@ -118,7 +131,7 @@ function selectClarification({ rawItemName, option }) {
     <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <summary class="cursor-pointer text-sm font-semibold text-slate-900">{{ copy.advancedTitle }}</summary>
       <p class="mt-2 text-sm text-slate-600">{{ copy.advancedHint }}</p>
-      <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <div class="mt-4 grid gap-4 md:grid-cols-4">
         <label class="flex flex-col gap-2 text-sm text-slate-700">
           <span class="font-medium">{{ copy.plannerMode }}</span>
           <select v-model="plannerMode" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
@@ -139,6 +152,27 @@ function selectClarification({ rawItemName, option }) {
             <option value="template">Template</option>
             <option value="gemini">Gemini</option>
           </select>
+        </label>
+        <label class="flex flex-col gap-2 text-sm text-slate-700">
+          <span class="font-medium">{{ copy.decisionPolicy }}</span>
+          <select v-model="decisionPolicy" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
+            <option value="cheapest_single_store">最平一間店</option>
+            <option value="cheapest_two_stores">最平最多兩間店</option>
+            <option value="single_store_preferred">優先一間店</option>
+            <option value="balanced">平衡價格與少走路</option>
+          </select>
+        </label>
+      </div>
+      <div v-if="decisionPolicy === 'single_store_preferred'" class="mt-4 max-w-xl">
+        <label class="flex flex-col gap-2 text-sm text-slate-700">
+          <span class="font-medium">{{ copy.thresholdLabel }}</span>
+          <input v-model.number="singleStoreThresholdMop" type="number" min="0" step="0.5" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950" />
+        </label>
+      </div>
+      <div v-if="decisionPolicy === 'balanced'" class="mt-4 max-w-xl">
+        <label class="flex flex-col gap-2 text-sm text-slate-700">
+          <span class="font-medium">{{ copy.penaltyLabel }}</span>
+          <input v-model.number="extraStorePenaltyMop" type="number" min="0" step="0.5" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950" />
         </label>
       </div>
     </details>

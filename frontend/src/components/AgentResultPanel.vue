@@ -35,6 +35,11 @@ const copy = {
   recalculate: '\u6309\u4ee5\u4e0a\u9078\u64c7\u91cd\u65b0\u8a08\u7b97',
   notCoveredTitle: '\u66ab\u672a\u6536\u9304',
   pricePlanTitleDefault: '\u53ef\u8a08\u50f9\u65b9\u6848',
+  recommendationTitle: '推薦方案',
+  policyLabel: '採購策略',
+  storeCountLabel: '需要去幾間店',
+  storesLabel: '店舖',
+  alternativesTitle: '備選方案',
   bestPlanTitle: '\u6700\u4fbf\u5b9c\u65b9\u6848',
   temporaryPlanTitle: '\u5df2\u78ba\u8a8d\u5546\u54c1\u7684\u66ab\u6642\u8a08\u50f9',
   noPlan: '\u76ee\u524d\u672a\u80fd\u627e\u5230\u5b8c\u6574\u53ef\u8a08\u50f9\u65b9\u6848\u3002',
@@ -63,7 +68,9 @@ const composerDiagnostics = computed(() => props.result?.composer_diagnostics ||
 const resolvedItems = computed(() => props.result?.resolved_items || [])
 const ambiguousItems = computed(() => props.result?.ambiguous_items || [])
 const notCoveredItems = computed(() => props.result?.not_covered_items || [])
-const bestPlan = computed(() => props.result?.price_plan?.best_plan || null)
+const decisionResult = computed(() => props.result?.price_plan?.decision_result || null)
+const bestPlan = computed(() => decisionResult.value?.best_recommendation || props.result?.price_plan?.best_plan || null)
+const alternatives = computed(() => (decisionResult.value?.alternatives || []).slice(0, 2))
 const pricePlanTitle = computed(() => {
   if (props.result?.status === 'ok') return copy.bestPlanTitle
   if (props.result?.status === 'partial' || props.result?.status === 'needs_clarification') return copy.temporaryPlanTitle
@@ -85,6 +92,21 @@ function clarificationOptions(item) {
 }
 function isSelected(rawItemName, intentId) { return props.selectedClarifications?.[rawItemName]?.intent_id === intentId }
 function selectOption(rawItemName, option) { emit('select-clarification', { rawItemName, option }) }
+function policyLabel(policy) {
+  return {
+    cheapest_single_store: '最平一間店',
+    cheapest_two_stores: '最平最多兩間店',
+    single_store_preferred: '優先一間店',
+    balanced: '平衡價格與少走路',
+  }[policy] || policy || 'N/A'
+}
+function storeNames(plan) {
+  const names = plan?.supermarket_names || [plan?.supermarket_name]
+  return names.filter(Boolean).join('、') || copy.unknownStore
+}
+function itemStoreName(item, plan) { return item?.selected_store_name || plan?.supermarket_name || copy.unknownStore }
+function decisionDebugJson() { return JSON.stringify(decisionResult.value || {}, null, 2) }
+
 </script>
 
 <template>
@@ -146,17 +168,34 @@ function selectOption(rawItemName, option) { emit('select-clarification', { rawI
         <p v-if="result.status === 'needs_clarification' || result.status === 'partial'" class="mt-2 rounded-xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">{{ copy.temporaryPricingMessage }}</p>
         <div v-if="bestPlan" class="mt-4 grid gap-4">
           <div class="rounded-xl bg-emerald-50 p-4">
-            <div class="text-sm font-medium text-emerald-800">{{ copy.storeLabel }}</div>
-            <div class="mt-1 text-xl font-semibold text-slate-950">{{ bestPlan.supermarket_name || copy.unknownStore }}</div>
-            <div class="mt-3 text-sm font-medium text-emerald-800">{{ copy.totalLabel }}</div>
-            <div class="mt-1 text-3xl font-bold text-slate-950">{{ formatMoney(bestPlan.estimated_total_mop) }}</div>
+            <div class="text-sm font-medium text-emerald-800">{{ copy.recommendationTitle }}</div>
+            <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <div class="text-xs font-medium text-emerald-800">{{ copy.policyLabel }}</div>
+                <div class="mt-1 text-base font-semibold text-slate-950">{{ policyLabel(decisionResult?.policy) }}</div>
+              </div>
+              <div>
+                <div class="text-xs font-medium text-emerald-800">{{ copy.storeCountLabel }}</div>
+                <div class="mt-1 text-base font-semibold text-slate-950">{{ bestPlan.store_count || 1 }}</div>
+              </div>
+              <div>
+                <div class="text-xs font-medium text-emerald-800">{{ copy.storesLabel }}</div>
+                <div class="mt-1 text-base font-semibold text-slate-950">{{ storeNames(bestPlan) }}</div>
+              </div>
+              <div>
+                <div class="text-xs font-medium text-emerald-800">{{ copy.totalLabel }}</div>
+                <div class="mt-1 text-2xl font-bold text-slate-950">{{ formatMoney(bestPlan.estimated_total_mop) }}</div>
+              </div>
+            </div>
+            <p v-if="decisionResult?.decision_explanation_zh" class="mt-3 text-sm leading-6 text-emerald-950">{{ decisionResult.decision_explanation_zh }}</p>
           </div>
           <div class="grid gap-3">
-            <article v-for="item in bestPlan.items || []" :key="`best-plan-${item.raw_item_name}-${item.selected_product_name}`" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <article v-for="item in bestPlan.items || []" :key="`best-plan-${item.raw_item_name}-${item.selected_product_name}-${itemStoreName(item, bestPlan)}`" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div class="text-base font-semibold text-slate-950">{{ item.raw_item_name }}</div>
                   <div class="mt-1 text-sm text-slate-700">{{ item.selected_product_name || copy.unknownProduct }}</div>
+                  <div class="mt-1 text-xs text-slate-500">{{ copy.storeLabel }}：{{ itemStoreName(item, bestPlan) }}</div>
                 </div>
                 <div class="text-sm font-semibold text-slate-900">{{ formatMoney(item.subtotal_mop) }}</div>
               </div>
@@ -166,6 +205,14 @@ function selectOption(rawItemName, option) { emit('select-clarification', { rawI
                 <div>{{ copy.packageLabel }}{{ item.package_quantity || copy.packageFallback }}</div>
               </div>
             </article>
+          </div>
+          <div v-if="alternatives.length" class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="text-sm font-semibold text-slate-900">{{ copy.alternativesTitle }}</div>
+            <div class="mt-3 grid gap-2">
+              <div v-for="plan in alternatives" :key="`alt-${storeNames(plan)}-${plan.estimated_total_mop}`" class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {{ storeNames(plan) }} ? {{ plan.store_count || 1 }} 間店 ? {{ formatMoney(plan.estimated_total_mop) }}
+              </div>
+            </div>
           </div>
         </div>
         <p v-else class="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{{ copy.noPlan }}</p>
@@ -184,6 +231,8 @@ function selectOption(rawItemName, option) { emit('select-clarification', { rawI
           <div class="rounded-xl bg-slate-50 p-3">retrieval_mode: {{ diagnostics.retrieval_mode || 'N/A' }}</div>
           <div class="rounded-xl bg-slate-50 p-3">composer_used: {{ diagnostics.composer_used || composerDiagnostics.composer_used || 'N/A' }}</div>
           <div class="rounded-xl bg-slate-50 p-3">composer_mode: {{ composerDiagnostics.composer_mode || diagnostics.composer_mode || 'N/A' }}</div>
+          <div class="rounded-xl bg-slate-50 p-3">decision_policy: {{ decisionResult?.policy || 'N/A' }}</div>
+          <div class="rounded-xl bg-slate-50 p-3">decision_score: {{ decisionResult?.diagnostics?.decision_score ?? 'N/A' }}</div>
         </div>
         <div v-if="(diagnostics.planner_errors || []).length || (composerDiagnostics.composer_errors || []).length" class="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
           <div class="font-semibold">Fallback / errors</div>
@@ -191,6 +240,12 @@ function selectOption(rawItemName, option) { emit('select-clarification', { rawI
             <li v-for="item in diagnostics.planner_errors || []" :key="`planner-${item}`">planner: {{ item }}</li>
             <li v-for="item in composerDiagnostics.composer_errors || []" :key="`composer-${item}`">composer: {{ item }}</li>
           </ul>
+        </div>
+        <div v-if="decisionResult?.diagnostics" class="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+          <div class="font-semibold">Decision diagnostics</div>
+          <pre class="mt-2 overflow-x-auto text-xs leading-6">{{ JSON.stringify(decisionResult.diagnostics, null, 2) }}</pre>
+          <div class="mt-2 font-semibold">Raw decision_result</div>
+          <pre class="mt-2 overflow-x-auto text-xs leading-6">{{ decisionDebugJson() }}</pre>
         </div>
         <pre class="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ debugJson }}</pre>
       </details>

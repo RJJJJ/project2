@@ -1,0 +1,483 @@
+[
+  {
+    "case_id": "ambiguous_sugar",
+    "query": "糖",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "糖"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "糖"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_sugar",
+    "query": "砂糖",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "cooking_sugar"
+      ],
+      "not_candidate_contains": [
+        "低糖豆奶"
+      ],
+      "price_plan_status_in": [
+        "ok",
+        "partial",
+        "not_priceable"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "砂糖"
+      ],
+      "resolved_intents": [
+        "cooking_sugar"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ambiguous_oil",
+    "query": "油",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "油"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "油"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_cooking_oil",
+    "query": "食油",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "cooking_oil"
+      ],
+      "not_candidate_contains": [
+        "麻油味即食麵",
+        "蠔油"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "食油"
+      ],
+      "resolved_intents": [
+        "cooking_oil"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ambiguous_noodle",
+    "query": "麵",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "麵"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "麵"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_instant_noodle",
+    "query": "即食麵",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "instant_noodle"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "即食麵"
+      ],
+      "resolved_intents": [
+        "instant_noodle"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ambiguous_chocolate",
+    "query": "朱古力",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "朱古力"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "朱古力"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_chocolate_drink",
+    "query": "朱古力飲品",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "chocolate_drink"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "朱古力飲品"
+      ],
+      "resolved_intents": [
+        "chocolate_drink"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ambiguous_tissue",
+    "query": "紙巾",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "紙巾"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "紙巾"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_wet_wipe",
+    "query": "濕紙巾",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "wet_wipe"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "濕紙巾"
+      ],
+      "resolved_intents": [
+        "wet_wipe"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "resolved_shampoo",
+    "query": "洗頭水",
+    "passed": true,
+    "expected": {
+      "resolved_intents": [
+        "shampoo"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "洗頭水"
+      ],
+      "resolved_intents": [
+        "shampoo"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "not_covered_mm",
+    "query": "M&M",
+    "passed": true,
+    "expected": {
+      "status": "not_covered",
+      "not_covered_contains": [
+        "M&M"
+      ]
+    },
+    "actual_summary": {
+      "status": "not_covered",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [
+        "M&M"
+      ],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "not_covered_fries",
+    "query": "薯條",
+    "passed": true,
+    "expected": {
+      "status": "not_covered",
+      "not_covered_contains": [
+        "薯條"
+      ]
+    },
+    "actual_summary": {
+      "status": "not_covered",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [
+        "薯條"
+      ],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "not_covered_eggs",
+    "query": "雞蛋",
+    "passed": true,
+    "expected": {
+      "status": "not_covered",
+      "not_covered_contains": [
+        "雞蛋"
+      ],
+      "not_candidate_contains": [
+        "雞蛋幼面"
+      ]
+    },
+    "actual_summary": {
+      "status": "not_covered",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [
+        "雞蛋"
+      ],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "mixed_guardrails",
+    "query": "兩包麵 一包薯條 四包薯片 油 糖 M&M",
+    "passed": true,
+    "expected": {
+      "status": "needs_clarification",
+      "ambiguous_contains": [
+        "麵",
+        "油",
+        "糖"
+      ],
+      "not_covered_contains": [
+        "薯條",
+        "M&M"
+      ],
+      "resolved_contains": [
+        "薯片"
+      ]
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [
+        "薯片"
+      ],
+      "resolved_intents": [
+        "chips"
+      ],
+      "ambiguous": [
+        "麵",
+        "油",
+        "糖"
+      ],
+      "not_covered": [
+        "薯條",
+        "M&M"
+      ],
+      "price_plan_status": "needs_clarification",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ok_sugar_shampoo",
+    "query": "我想買砂糖同洗頭水",
+    "passed": true,
+    "expected": {
+      "status": "ok",
+      "resolved_contains": [
+        "砂糖",
+        "洗頭水"
+      ],
+      "price_plan_status": "ok"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "砂糖",
+        "洗頭水"
+      ],
+      "resolved_intents": [
+        "cooking_sugar",
+        "shampoo"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "ok_oil_choc_toothpaste",
+    "query": "我想買食油、朱古力飲品、牙膏",
+    "passed": true,
+    "expected": {
+      "status": "ok",
+      "resolved_contains": [
+        "食油",
+        "朱古力飲品",
+        "牙膏"
+      ],
+      "price_plan_status": "ok"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "食油",
+        "朱古力飲品",
+        "牙膏"
+      ],
+      "resolved_intents": [
+        "cooking_oil",
+        "chocolate_drink",
+        "toothpaste"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "rag_sugar_shampoo",
+    "query": "我想買洗頭水同砂糖",
+    "passed": true,
+    "expected": {
+      "status": "ok",
+      "resolved_contains": [
+        "砂糖",
+        "洗頭水"
+      ],
+      "candidate_contains": [
+        "太古純正砂糖"
+      ],
+      "not_candidate_contains": [
+        "辣椒醬",
+        "青芥辣",
+        "甜醋"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "洗頭水",
+        "砂糖"
+      ],
+      "resolved_intents": [
+        "shampoo",
+        "cooking_sugar"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store"
+    },
+    "failures": []
+  }
+]
