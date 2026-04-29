@@ -8,6 +8,21 @@ from services.product_intent_taxonomy import NOT_COVERED_QUERIES, PRODUCT_INTENT
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9&']+|[\u4e00-\u9fff]+")
 
+_INTENT_TERM_OVERRIDES: dict[str, dict[str, list[str]]] = {
+    "cooking_sugar": {
+        "positive_terms": ["砂糖", "白砂糖", "純正砂糖", "糖"],
+        "negative_terms": ["低糖", "無糖", "少糖", "糖醋", "甜醋", "辣椒醬", "青芥辣"],
+    },
+    "cooking_oil": {
+        "positive_terms": ["食油", "花生油", "粟米油", "芥花籽油", "橄欖油", "純正油"],
+        "negative_terms": ["麻油味", "即食麵", "蠔油", "醬油", "辣椒油", "芝麻油"],
+    },
+    "shampoo": {
+        "positive_terms": ["洗頭水", "洗髮", "洗髮乳", "洗髮露", "洗髮水"],
+        "negative_terms": ["沐浴露", "沐浴乳", "洗手液", "洗衣"],
+    },
+}
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -93,8 +108,13 @@ def rag_assisted_retrieve_candidates(
     synonym_intent = QUERY_SYNONYMS.get(query_text) or QUERY_SYNONYMS.get(query_text.casefold())
     intent = PRODUCT_INTENTS.get(intent_id) if intent_id else None
     allowlist = {int(item) for item in (intent or {}).get("category_allowlist", []) if item is not None}
+    overrides = _INTENT_TERM_OVERRIDES.get(str(intent_id or ""), {})
     positive_terms = [str(term) for term in (intent or {}).get("positive_terms", [])]
+    positive_terms.extend(overrides.get("positive_terms", []))
+    positive_terms = list(dict.fromkeys(term for term in positive_terms if term))
     negative_terms = [str(term) for term in (intent or {}).get("negative_terms", [])]
+    negative_terms.extend(overrides.get("negative_terms", []))
+    negative_terms = list(dict.fromkeys(term for term in negative_terms if term))
 
     scored: list[dict[str, Any]] = []
     for product, document in zip(products, documents):
@@ -106,19 +126,22 @@ def rag_assisted_retrieve_candidates(
 
         if allowlist and category_id not in allowlist:
             continue
-        if intent_id and any(_contains_term(name, term) for term in negative_terms):
+        if intent_id and any(_contains_term(search_text, term) for term in negative_terms):
             continue
 
         score = 0.0
         reasons: list[str] = []
         matched_terms: list[str] = []
+        intent_match_signal = False
 
         if normalized_query and name.casefold() == normalized_query:
             score += 12.0
             reasons.append("exact product name match")
+            intent_match_signal = True
         if normalized_query and normalized_query in name.casefold():
             score += 8.0
             reasons.append("query contained in product name")
+            intent_match_signal = True
         if normalized_query and normalized_query in category_name.casefold():
             score += 3.0
             reasons.append("query matched category name")
@@ -127,23 +150,28 @@ def rag_assisted_retrieve_candidates(
             if token in product_tokens:
                 score += 2.5
                 matched_terms.append(token)
+                if token in set(_tokens(name)):
+                    intent_match_signal = True
         if matched_terms:
             reasons.append("matched lexical terms")
 
         if synonym_intent and synonym_intent in (document.get("intent_tags") or []):
             score += 4.0
             reasons.append("matched synonym intent tag")
+            intent_match_signal = True
 
         if intent_id and intent_id in (document.get("intent_tags") or []):
             score += 5.0
             reasons.append("matched intent tag")
+            intent_match_signal = True
 
-        matched_positive_terms = [term for term in positive_terms if _contains_term(name, term)]
+        matched_positive_terms = [term for term in positive_terms if _contains_term(search_text, term)]
         for term in matched_positive_terms:
             score += 3.5
             matched_terms.append(term)
         if matched_positive_terms:
             reasons.append("matched intent positive terms")
+            intent_match_signal = True
 
         if allowlist and category_id in allowlist:
             score += 2.0
@@ -156,11 +184,14 @@ def rag_assisted_retrieve_candidates(
 
         if score <= 0:
             continue
+        if intent_id and not intent_match_signal and not matched_terms:
+            continue
 
         candidate = dict(product)
         candidate.update(
             {
                 "retrieval_mode": "rag_assisted",
+                "risky": intent_id is None,
                 "rag_score": round(score, 3),
                 "rag_reason": "; ".join(dict.fromkeys(reasons)),
                 "matched_terms": list(dict.fromkeys(matched_terms)),
