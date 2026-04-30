@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import re
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -33,8 +35,33 @@ def _contains_any(values: list[str], needle: str) -> bool:
     return any(needle in value for value in values)
 
 
+def _normalize_product_text(value: str) -> str:
+    text = unicodedata.normalize("NFKC", str(value or ""))
+    return re.sub(r"[\s\-_－—–()（）\[\]{}<>/\\,.:：;；·]+", "", text)
+
+
+def _contains_any_product_name(values: list[str], needle: str) -> bool:
+    normalized_needle = _normalize_product_text(needle)
+    return any(normalized_needle and normalized_needle in _normalize_product_text(value) for value in values)
+
+
+def _result_product_names(result: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    for summary in result.get("candidate_summary") or []:
+        for candidate in summary.get("top_candidates") or []:
+            product_name = str(candidate.get("product_name") or "").strip()
+            if product_name:
+                names.append(product_name)
+        direct_search = summary.get("direct_search") or {}
+        for candidate in direct_search.get("matches") or []:
+            product_name = str(candidate.get("product_name") or "").strip()
+            if product_name:
+                names.append(product_name)
+    return list(dict.fromkeys(names))
+
+
 def _case(case_id: str, query: str, expected: dict[str, Any], **overrides: Any) -> dict[str, Any]:
-    return {"case_id": case_id, "query": query, "expected": expected, "overrides": overrides}
+    return {"case_id": case_id, "query": query, "expected": expected, "overrides": overrides, "source": "base"}
 
 
 def build_cases(include_rag_cases: bool = True, include_local_llm_cases: bool = False) -> list[dict[str, Any]]:
@@ -102,7 +129,39 @@ def load_extra_cases(path: str | None) -> list[dict[str, Any]]:
         if not query:
             continue
         expected = item.get("suggested_expected") or {}
-        cases.append({"case_id": f"review_queue_{idx + 1}", "query": query, "expected": expected, "overrides": {}, "pending_manual_label": bool(expected.get("needs_manual_label"))})
+        cases.append({"case_id": f"review_queue_{idx + 1}", "query": query, "expected": expected, "overrides": {}, "pending_manual_label": bool(expected.get("needs_manual_label")), "source": "review_queue"})
+    return cases
+
+
+def load_catalog_adversarial_cases(path: str | None) -> list[dict[str, Any]]:
+    if not path:
+        return []
+    audit_path = Path(path)
+    if not audit_path.exists():
+        return []
+    data = json.loads(audit_path.read_text(encoding="utf-8"))
+    cases: list[dict[str, Any]] = []
+    for idx, item in enumerate(data if isinstance(data, list) else []):
+        query = str(item.get("query") or "").strip()
+        expected = item.get("expected") or {}
+        if not query or not isinstance(expected, dict):
+            continue
+        case_id = str(item.get("case_id") or f"catalog_adversarial_{idx + 1}")
+        cases.append(
+            {
+                "case_id": case_id,
+                "query": query,
+                "expected": expected,
+                "overrides": dict(item.get("overrides") or {}),
+                "pending_manual_label": bool(item.get("needs_manual_label")),
+                "source": str(item.get("source") or "catalog_confusion_audit"),
+                "term": item.get("term"),
+                "case_type": item.get("case_type"),
+                "status": item.get("status"),
+                "enforce": item.get("enforce"),
+                "review": item.get("review") or {},
+            }
+        )
     return cases
 
 
@@ -114,10 +173,13 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
     resolved = _names(result.get("resolved_items") or [])
     intents = _resolved_intents(result)
     candidate_text = _candidate_text(result)
+    product_names = _result_product_names(result)
     price_plan = result.get("price_plan") or {}
     router = result.get("query_router") or {}
     if expected.get("status") and result.get("status") != expected["status"]:
         failures.append(f"status expected {expected['status']} got {result.get('status')}")
+    if expected.get("status_in") and result.get("status") not in expected["status_in"]:
+        failures.append(f"status expected in {expected['status_in']} got {result.get('status')}")
     if expected.get("not_status") and result.get("status") in expected["not_status"]:
         failures.append(f"status should not be in {expected['not_status']} got {result.get('status')}")
     if expected.get("query_type") and router.get("query_type") != expected["query_type"]:
@@ -146,6 +208,12 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
     for needle in expected.get("not_candidate_contains", []):
         if needle in candidate_text:
             failures.append(f"candidate text should not contain {needle}")
+    for needle in expected.get("must_include_product_names", []):
+        if not _contains_any_product_name(product_names, needle):
+            failures.append(f"product names missing {needle}")
+    for needle in expected.get("must_not_include_product_names", []):
+        if _contains_any_product_name(product_names, needle):
+            failures.append(f"product names should not contain {needle}")
     if expected.get("top_candidate_contains") or expected.get("top_candidate_not_contains"):
         top_candidate = ""
         summaries = result.get("candidate_summary") or []
@@ -161,6 +229,7 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
         "resolved_intents": intents,
         "ambiguous": ambiguous,
         "not_covered": not_covered,
+        "product_names": product_names,
         "price_plan_status": price_plan.get("status"),
         "decision_policy": (price_plan.get("decision_result") or {}).get("policy"),
         "query_type": router.get("query_type"),
@@ -171,8 +240,14 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
 
 def write_summary(path: Path, rows: list[dict[str, Any]], modes: dict[str, Any]) -> None:
     total = len(rows)
+    base_total = sum(1 for row in rows if row.get("source") == "base")
+    catalog_total = sum(1 for row in rows if row.get("source") == "catalog_confusion_audit")
+    active_strict = sum(1 for row in rows if row.get("source") == "catalog_confusion_audit" and row.get("catalog_state") == "active_strict")
     passed = sum(1 for row in rows if row["passed"])
     pending = sum(1 for row in rows if row.get("pending_manual_label"))
+    ignored = sum(1 for row in rows if row.get("ignored"))
+    needs_revision = sum(1 for row in rows if row.get("needs_revision"))
+    needs_data_check = sum(1 for row in rows if row.get("needs_data_check"))
     failed = total - passed
     pass_rate = 0 if total == 0 else round(passed / total * 100, 2)
     failed_rows = [row for row in rows if not row["passed"]]
@@ -180,10 +255,16 @@ def write_summary(path: Path, rows: list[dict[str, Any]], modes: dict[str, Any])
         "# Agent Regression Summary",
         "",
         f"generated_at: {datetime.now(timezone.utc).isoformat()}",
+        f"base_total: {base_total}",
+        f"catalog_adversarial_total: {catalog_total}",
+        f"active_strict: {active_strict}",
+        f"pending_manual_label: {pending}",
+        f"ignored: {ignored}",
+        f"needs_revision: {needs_revision}",
+        f"needs_data_check: {needs_data_check}",
         f"total: {total}",
         f"passed: {passed}",
         f"failed: {failed}",
-        f"pending_manual_label: {pending}",
         f"pass_rate: {pass_rate}%",
         f"modes used: `{json.dumps(modes, ensure_ascii=False)}`",
         "",
@@ -212,15 +293,28 @@ def main() -> int:
     parser.add_argument("--include-rag-cases", action="store_true")
     parser.add_argument("--include-local-llm-cases", action="store_true")
     parser.add_argument("--extra-cases-path", default=None)
+    parser.add_argument("--catalog-adversarial-cases-path", default=None)
     args = parser.parse_args()
 
     include_rag = True or args.include_rag_cases
     cases = build_cases(include_rag_cases=include_rag, include_local_llm_cases=args.include_local_llm_cases)
     cases.extend(load_extra_cases(args.extra_cases_path))
+    cases.extend(load_catalog_adversarial_cases(args.catalog_adversarial_cases_path))
     rows: list[dict[str, Any]] = []
     for case in cases:
-        if case.get("pending_manual_label"):
-            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": True, "expected": case["expected"], "actual_summary": {}, "failures": []})
+        status = str(case.get("status") or "")
+        enforce = case.get("enforce")
+        if status == "ignored":
+            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": False, "ignored": True, "needs_revision": False, "needs_data_check": False, "expected": case["expected"], "actual_summary": {}, "failures": [], "source": case.get("source", "unknown"), "term": case.get("term"), "case_type": case.get("case_type"), "catalog_state": "ignored"})
+            continue
+        if status == "needs_revision":
+            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": True, "ignored": False, "needs_revision": True, "needs_data_check": False, "expected": case["expected"], "actual_summary": {}, "failures": [], "source": case.get("source", "unknown"), "term": case.get("term"), "case_type": case.get("case_type"), "catalog_state": "needs_revision"})
+            continue
+        if status == "needs_data_check":
+            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": True, "ignored": False, "needs_revision": False, "needs_data_check": True, "expected": case["expected"], "actual_summary": {}, "failures": [], "source": case.get("source", "unknown"), "term": case.get("term"), "case_type": case.get("case_type"), "catalog_state": "needs_data_check"})
+            continue
+        if case.get("pending_manual_label") and enforce is not True:
+            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": True, "ignored": False, "needs_revision": False, "needs_data_check": False, "expected": case["expected"], "actual_summary": {}, "failures": [], "source": case.get("source", "unknown"), "term": case.get("term"), "case_type": case.get("case_type"), "catalog_state": "pending"})
             continue
         overrides = dict(case.get("overrides") or {})
         result = run_shopping_agent(
@@ -237,7 +331,7 @@ def main() -> int:
             llm_router_model=args.llm_router_model,
         )
         passed, failures, actual_summary = evaluate_case(case, result)
-        rows.append({"case_id": case["case_id"], "query": case["query"], "passed": passed, "expected": case["expected"], "actual_summary": actual_summary, "failures": failures})
+        rows.append({"case_id": case["case_id"], "query": case["query"], "passed": passed, "pending_manual_label": False, "ignored": False, "needs_revision": False, "needs_data_check": False, "expected": case["expected"], "actual_summary": actual_summary, "failures": failures, "source": case.get("source", "unknown"), "term": case.get("term"), "case_type": case.get("case_type"), "catalog_state": "active_strict" if case.get("source") == "catalog_confusion_audit" else "base"})
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -247,15 +341,27 @@ def main() -> int:
     modes = {"planner_mode": args.planner_mode, "retrieval_mode": args.retrieval_mode, "composer_mode": args.composer_mode, "decision_policy": args.decision_policy, "llm_router_enabled": args.llm_router_enabled}
     write_summary(summary_path, rows, modes)
     total = len(rows)
+    base_total = sum(1 for row in rows if row.get("source") == "base")
+    catalog_total = sum(1 for row in rows if row.get("source") == "catalog_confusion_audit")
+    active_strict = sum(1 for row in rows if row.get("source") == "catalog_confusion_audit" and row.get("catalog_state") == "active_strict")
     passed = sum(1 for row in rows if row["passed"])
     pending = sum(1 for row in rows if row.get("pending_manual_label"))
+    ignored = sum(1 for row in rows if row.get("ignored"))
+    needs_revision = sum(1 for row in rows if row.get("needs_revision"))
+    needs_data_check = sum(1 for row in rows if row.get("needs_data_check"))
     failed = total - passed
     pass_rate = 0 if total == 0 else round(passed / total * 100, 2)
     print("AGENT REGRESSION SUMMARY")
+    print(f"base_total: {base_total}")
+    print(f"catalog_adversarial_total: {catalog_total}")
+    print(f"active_strict: {active_strict}")
+    print(f"pending_manual_label: {pending}")
+    print(f"ignored: {ignored}")
+    print(f"needs_revision: {needs_revision}")
+    print(f"needs_data_check: {needs_data_check}")
     print(f"total: {total}")
     print(f"passed: {passed}")
     print(f"failed: {failed}")
-    print(f"pending_manual_label: {pending}")
     print(f"pass_rate: {pass_rate}%")
     print("outputs:")
     print(f"- {results_path}")

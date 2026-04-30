@@ -1,0 +1,944 @@
+[
+  {
+    "case_id": "confusion_sugar_generic_001",
+    "term": "糖",
+    "query": "糖",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "Eclipse易極薄荷糖 (藍色)",
+        "爽浪 - 超涼薄荷無糖香口珠袋裝",
+        "爽浪 - 無糖超涼糖 - 超涼薄荷味"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_sugar_direct_001",
+    "term": "糖",
+    "query": "Eclipse易極薄荷糖 (藍色)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "Eclipse易極薄荷糖 (藍色)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "245"
+  },
+  {
+    "case_id": "confusion_sugar_direct_002",
+    "term": "糖",
+    "query": "利口樂 - 香草潤喉糖 - 檸檬味",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "利口樂 - 香草潤喉糖 - 檸檬味"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "953"
+  },
+  {
+    "case_id": "confusion_sugar_direct_003",
+    "term": "糖",
+    "query": "二寶 - 果汁糖條裝",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "二寶 - 果汁糖條裝"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "954"
+  },
+  {
+    "case_id": "confusion_oil_generic_001",
+    "term": "油",
+    "query": "油",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "麗仕 精油香芬沐浴露(浪漫怡香)",
+        "出前一丁麻油味即食麵(袋裝)",
+        "出前一丁麻油味即食麵(碗麵)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_oil_direct_001",
+    "term": "油",
+    "query": "麗仕 精油香芬沐浴露(浪漫怡香)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "麗仕 精油香芬沐浴露(浪漫怡香)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "985"
+  },
+  {
+    "case_id": "confusion_oil_direct_002",
+    "term": "油",
+    "query": "出前一丁麻油味即食麵(袋裝)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "出前一丁麻油味即食麵(袋裝)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "20"
+  },
+  {
+    "case_id": "confusion_oil_direct_003",
+    "term": "油",
+    "query": "出前一丁麻油味即食麵(碗麵)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "出前一丁麻油味即食麵(碗麵)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "303"
+  },
+  {
+    "case_id": "confusion_rice_generic_001",
+    "term": "米",
+    "query": "米",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "媽媽快熟清湯米粉",
+        "家樂氏原味玉米片",
+        "公仔米粉 - 雪菜"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_rice_direct_001",
+    "term": "米",
+    "query": "京城牌拍拖米",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "京城牌拍拖米"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "1"
+  },
+  {
+    "case_id": "confusion_rice_direct_002",
+    "term": "米",
+    "query": "好米食代台南十一號",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "好米食代台南十一號"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "714"
+  },
+  {
+    "case_id": "confusion_rice_direct_003",
+    "term": "米",
+    "query": "媽媽快熟清湯米粉",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "媽媽快熟清湯米粉"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "22"
+  },
+  {
+    "case_id": "confusion_noodle_direct_001",
+    "term": "麵",
+    "query": "福字上湯伊麵",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "福字上湯伊麵"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "666"
+  },
+  {
+    "case_id": "confusion_noodle_direct_002",
+    "term": "麵",
+    "query": "康師傅紅燒牛肉麵",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "康師傅紅燒牛肉麵"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "673"
+  },
+  {
+    "case_id": "confusion_noodle_direct_003",
+    "term": "麵",
+    "query": "天使牌瑤柱麵",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "天使牌瑤柱麵"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "778"
+  },
+  {
+    "case_id": "confusion_noodle_simplified_direct_001",
+    "term": "面",
+    "query": "高潔絲親膚棉面超薄護翼衛生巾-日用21cm",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "高潔絲親膚棉面超薄護翼衛生巾-日用21cm"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "221"
+  },
+  {
+    "case_id": "confusion_noodle_simplified_direct_002",
+    "term": "面",
+    "query": "潔柔布藝(圓點)240抽抽取式紙面巾",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "潔柔布藝(圓點)240抽抽取式紙面巾"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "285"
+  },
+  {
+    "case_id": "confusion_noodle_simplified_direct_003",
+    "term": "面",
+    "query": "維達金裝至尊3層盒裝面紙80抽x5盒",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "維達金裝至尊3層盒裝面紙80抽x5盒"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "1068"
+  },
+  {
+    "case_id": "confusion_milk_direct_001",
+    "term": "奶",
+    "query": "太平奶鹽梳打餅乾",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "太平奶鹽梳打餅乾"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "678"
+  },
+  {
+    "case_id": "confusion_milk_direct_002",
+    "term": "奶",
+    "query": "欣得食品奶香饅頭",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "欣得食品奶香饅頭"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "882"
+  },
+  {
+    "case_id": "confusion_milk_direct_003",
+    "term": "奶",
+    "query": "欣得食品奶皇包",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "欣得食品奶皇包"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "891"
+  },
+  {
+    "case_id": "confusion_water_generic_001",
+    "term": "水",
+    "query": "水",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "李施德林漱口水-原味",
+        "高露潔貝齒特涼薄荷漱口水",
+        "NONIO 無口氣漱口水 (清涼薄荷味)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_water_direct_001",
+    "term": "水",
+    "query": "李施德林漱口水-原味",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "李施德林漱口水-原味"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "191"
+  },
+  {
+    "case_id": "confusion_water_direct_002",
+    "term": "水",
+    "query": "高露潔貝齒特涼薄荷漱口水",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "高露潔貝齒特涼薄荷漱口水"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "510"
+  },
+  {
+    "case_id": "confusion_water_direct_003",
+    "term": "水",
+    "query": "棕欖 美之選輕爽水潤洗髮乳",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "棕欖 美之選輕爽水潤洗髮乳"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "980"
+  },
+  {
+    "case_id": "confusion_egg_generic_001",
+    "term": "蛋",
+    "query": "蛋",
+    "expected": {
+      "status": "not_covered",
+      "query_type": "not_covered_request",
+      "must_not_include_product_names": [
+        "卡夫蛋黃醬(白汁)",
+        "壽桃牌全蛋麵",
+        "麥老大雞蛋幼面"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_egg_direct_001",
+    "term": "蛋",
+    "query": "卡夫蛋黃醬(白汁)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "卡夫蛋黃醬(白汁)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "800"
+  },
+  {
+    "case_id": "confusion_egg_direct_002",
+    "term": "蛋",
+    "query": "壽桃牌全蛋麵",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "壽桃牌全蛋麵"
+      ],
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "29"
+  },
+  {
+    "case_id": "confusion_egg_direct_003",
+    "term": "蛋",
+    "query": "麥老大雞蛋幼面",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "麥老大雞蛋幼面"
+      ],
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "843"
+  },
+  {
+    "case_id": "confusion_chicken_egg_generic_001",
+    "term": "雞蛋",
+    "query": "雞蛋",
+    "expected": {
+      "status": "not_covered",
+      "query_type": "not_covered_request",
+      "must_not_include_product_names": [
+        "麥老大雞蛋幼面"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_chicken_egg_direct_001",
+    "term": "雞蛋",
+    "query": "麥老大雞蛋幼面",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "麥老大雞蛋幼面"
+      ],
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "843"
+  },
+  {
+    "case_id": "confusion_paper_generic_001",
+    "term": "紙",
+    "query": "紙",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "得寶濕廁紙(清爽蘆薈)3包",
+        "好奇天然加厚嬰兒濕紙巾(補充裝)",
+        "好奇天然透氣紙尿片S碼60片"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_paper_direct_001",
+    "term": "紙",
+    "query": "絲潔萬用紙",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "絲潔萬用紙"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "217"
+  },
+  {
+    "case_id": "confusion_paper_direct_002",
+    "term": "紙",
+    "query": "潔柔布藝(圓點)240抽抽取式紙面巾",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "潔柔布藝(圓點)240抽抽取式紙面巾"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "285"
+  },
+  {
+    "case_id": "confusion_paper_direct_003",
+    "term": "紙",
+    "query": "唯潔雅廚房萬用紙",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "唯潔雅廚房萬用紙"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "454"
+  },
+  {
+    "case_id": "confusion_tissue_generic_001",
+    "term": "紙巾",
+    "query": "紙巾",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "好奇天然加厚嬰兒濕紙巾(補充裝)",
+        "滴露萬用消毒濕紙巾",
+        "高樂氏家居消毒濕紙巾-清新香味"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_tissue_direct_001",
+    "term": "紙巾",
+    "query": "好奇天然加厚嬰兒濕紙巾(補充裝)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "好奇天然加厚嬰兒濕紙巾(補充裝)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "816"
+  },
+  {
+    "case_id": "confusion_tissue_direct_002",
+    "term": "紙巾",
+    "query": "滴露萬用消毒濕紙巾",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "滴露萬用消毒濕紙巾"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "945"
+  },
+  {
+    "case_id": "confusion_tissue_direct_003",
+    "term": "紙巾",
+    "query": "高樂氏家居消毒濕紙巾-清新香味",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "高樂氏家居消毒濕紙巾-清新香味"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "946"
+  },
+  {
+    "case_id": "confusion_chocolate_direct_001",
+    "term": "朱古力",
+    "query": "吉百利朱古力飲品",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "吉百利朱古力飲品"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "595"
+  },
+  {
+    "case_id": "confusion_chocolate_direct_002",
+    "term": "朱古力",
+    "query": "維他朱古力牛奶飲品",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "維他朱古力牛奶飲品"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "349"
+  },
+  {
+    "case_id": "confusion_tea_direct_001",
+    "term": "茶",
+    "query": "Lipton立頓黃色標籤茶",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "Lipton立頓黃色標籤茶"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "751"
+  },
+  {
+    "case_id": "confusion_tea_direct_002",
+    "term": "茶",
+    "query": "川寧豪門伯爵茶",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "川寧豪門伯爵茶"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "754"
+  },
+  {
+    "case_id": "confusion_tea_direct_003",
+    "term": "茶",
+    "query": "王老吉涼茶(罐裝)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "王老吉涼茶(罐裝)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "869"
+  },
+  {
+    "case_id": "confusion_salt_direct_001",
+    "term": "鹽",
+    "query": "太平奶鹽梳打餅乾",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "太平奶鹽梳打餅乾"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "678"
+  },
+  {
+    "case_id": "confusion_salt_direct_002",
+    "term": "鹽",
+    "query": "淘大減鹽蠔油",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "淘大減鹽蠔油"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "695"
+  },
+  {
+    "case_id": "confusion_salt_direct_003",
+    "term": "鹽",
+    "query": "Lurpak丹麥銀寶有鹽軟牛油",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "Lurpak丹麥銀寶有鹽軟牛油"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "130"
+  },
+  {
+    "case_id": "confusion_sauce_direct_001",
+    "term": "醬",
+    "query": "卡夫奇妙醬",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "卡夫奇妙醬"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "67"
+  },
+  {
+    "case_id": "confusion_sauce_direct_002",
+    "term": "醬",
+    "query": "頂好牌千島醬",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "頂好牌千島醬"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "362"
+  },
+  {
+    "case_id": "confusion_sauce_direct_003",
+    "term": "醬",
+    "query": "Nutella能多益榛子醬(350g裝)",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "Nutella能多益榛子醬(350g裝)"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "363"
+  },
+  {
+    "case_id": "confusion_powder_generic_001",
+    "term": "粉",
+    "query": "粉",
+    "expected": {
+      "status_in": [
+        "needs_clarification",
+        "ambiguous"
+      ],
+      "must_not_include_product_names": [
+        "媽媽快熟清湯米粉",
+        "公仔米粉 - 雪菜",
+        "天鵝牌-星洲炒米粉"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": false,
+    "case_type": "generic_term_guardrail"
+  },
+  {
+    "case_id": "confusion_powder_direct_001",
+    "term": "粉",
+    "query": "媽媽快熟清湯米粉",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "媽媽快熟清湯米粉"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "22"
+  },
+  {
+    "case_id": "confusion_powder_direct_002",
+    "term": "粉",
+    "query": "百得阿姨意大利粉 Spaghetti n.5",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "百得阿姨意大利粉 Spaghetti n.5"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "259"
+  },
+  {
+    "case_id": "confusion_powder_direct_003",
+    "term": "粉",
+    "query": "公仔米粉 - 雪菜",
+    "expected": {
+      "not_status": [
+        "not_covered"
+      ],
+      "must_include_product_names": [
+        "公仔米粉 - 雪菜"
+      ]
+    },
+    "source": "catalog_confusion_audit",
+    "needs_manual_label": true,
+    "case_type": "exact_product_guardrail",
+    "from_product_oid": "770"
+  }
+]

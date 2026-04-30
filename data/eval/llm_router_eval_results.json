@@ -1,13 +1,13 @@
 {
   "summary": {
-    "generated_at": "2026-04-30T08:57:07.857991+00:00",
+    "generated_at": "2026-04-30T14:41:15.739125+00:00",
     "provider": "gemini",
     "model": "gemini-2.5-flash",
     "total": 10,
     "exact_query_type_match": 9,
     "acceptable_match": 10,
     "guardrail_violations": 0,
-    "fallback_count": 10,
+    "fallback_count": 9,
     "invalid_json_count": 0,
     "pass_rate": 100.0,
     "provider_unavailable": true
@@ -22,7 +22,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 503: Service Unavailable"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -37,7 +37,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 503: Service Unavailable"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -51,7 +51,7 @@
       "confidence": "medium",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 503: Service Unavailable"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -65,7 +65,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 503: Service Unavailable"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -78,10 +78,8 @@
       ],
       "actual_query_type": "subjective_recommendation",
       "confidence": "high",
-      "llm_router_used": "fallback",
-      "errors": [
-        "Missing GEMINI_API_KEY"
-      ],
+      "llm_router_used": "gemini",
+      "errors": [],
       "guardrail_violation": null,
       "passed": true
     },
@@ -94,7 +92,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 503: Service Unavailable"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -108,7 +106,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 429: Too Many Requests"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -123,7 +121,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 429: Too Many Requests"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -138,7 +136,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 429: Too Many Requests"
       ],
       "guardrail_violation": null,
       "passed": true
@@ -152,7 +150,7 @@
       "confidence": "high",
       "llm_router_used": "fallback",
       "errors": [
-        "Missing GEMINI_API_KEY"
+        "HTTP Error 429: Too Many Requests"
       ],
       "guardrail_violation": null,
       "passed": true

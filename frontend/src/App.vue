@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { fetchHistoricalSignals, fetchPoints } from './api'
@@ -13,11 +13,14 @@ const historicalSignals = ref(null)
 const loadingHistoricalSignals = ref(false)
 const historicalSignalsError = ref('')
 
+const NOT_ENOUGH_HISTORY_WARNING = 'Not enough historical dates for historical comparison.'
+const PROCESSED_DATA_MISSING_PREFIX = 'Processed data not found'
+
 const districtGroups = [
-  { key: 'north', label: '北區（台山／黑沙環／祐漢／關閘）' },
-  { key: 'central', label: '中區（高士德／三盞燈／水坑尾）' },
-  { key: 'south', label: '南區（新馬路／下環／媽閣）' },
-  { key: 'islands', label: '離島（氹仔／路環）' },
+  { key: 'north', label: '北區 / 黑沙環 / 關閘一帶' },
+  { key: 'central', label: '中區 / 高士德 / 新馬路一帶' },
+  { key: 'south', label: '南區 / 筷子基 / 下環一帶' },
+  { key: 'islands', label: '離島 / 氹仔 / 路環' },
 ]
 
 const selectedPoint = computed(() => points.value.find((point) => point.point_code === pointCode.value))
@@ -27,7 +30,41 @@ const historicalSignalWarnings = computed(() => historicalSignals.value?.warning
 
 const dataFreshnessLabel = computed(() => {
   const day = new Date().getDay()
-  return day === 4 || day === 5 ? '本週最新數據已更新' : '數據每週三更新'
+  return day === 4 || day === 5 ? '本週較近期監測資料' : '最近一期監測資料'
+})
+
+const historicalAvailability = computed(() => {
+  const warnings = historicalSignalWarnings.value
+  if (historicalSignalItems.value.length > 0) {
+    return {
+      status: 'enough_history',
+      badge: '有足夠歷史資料',
+      title: '歷史價格訊號',
+      message: '目前僅部分採集點有足夠歷史價格資料；此區可顯示歷史價格訊號作為輔助參考。',
+    }
+  }
+  if (warnings.some((warning) => String(warning).includes(NOT_ENOUGH_HISTORY_WARNING))) {
+    return {
+      status: 'insufficient_history',
+      badge: '歷史資料不足',
+      title: '歷史資料不足',
+      message: '此地區暫未有足夠歷史價格資料，仍可使用當期格價功能。',
+    }
+  }
+  if (warnings.some((warning) => String(warning).includes(PROCESSED_DATA_MISSING_PREFIX))) {
+    return {
+      status: 'not_tracking',
+      badge: '尚未建立歷史追蹤',
+      title: '尚未建立歷史追蹤',
+      message: '此地區尚未建立歷史價格追蹤，仍可使用當期格價功能。',
+    }
+  }
+  return {
+    status: 'insufficient_history',
+    badge: '歷史資料不足',
+    title: '歷史資料暫未可用',
+    message: '此地區暫未有可顯示的歷史價格訊號，仍可使用當期格價功能。',
+  }
 })
 
 const pointGroups = computed(() => {
@@ -69,10 +106,10 @@ function percent(value) {
 
 function signalText(signalType) {
   return {
-    near_historical_low: '接近近期低位',
-    below_average: '低過平時',
-    unusual_high: '比平時貴，留意價格',
-  }[signalType] || '本週價格訊號'
+    near_historical_low: '接近歷史低位',
+    below_average: '低於近期平均',
+    unusual_high: '高於近期平均',
+  }[signalType] || '歷史價格訊號'
 }
 
 function toggleMode() {
@@ -88,7 +125,7 @@ async function loadPoints() {
       pointCode.value = points.value[0]?.point_code || 'p001'
     }
   } catch (err) {
-    pointsError.value = err?.message || '暫時未能載入地區清單'
+    pointsError.value = err?.message || '無法載入採集點清單'
   } finally {
     loadingPoints.value = false
   }
@@ -102,13 +139,15 @@ async function loadHistoricalSignals() {
     historicalSignals.value = await fetchHistoricalSignals({ pointCode: pointCode.value, date: 'latest', lookbackDays: 30, topN: 5 })
   } catch (err) {
     historicalSignals.value = null
-    historicalSignalsError.value = err?.message || '暫時未能載入本週抵買推介'
+    historicalSignalsError.value = err?.message || '無法載入歷史價格訊號'
   } finally {
     loadingHistoricalSignals.value = false
   }
 }
 
-watch(pointCode, () => { loadHistoricalSignals() })
+watch(pointCode, () => {
+  loadHistoricalSignals()
+})
 
 onMounted(async () => {
   await loadPoints()
@@ -131,7 +170,7 @@ onMounted(async () => {
             class="font-black tracking-tight transition-all duration-300"
             :class="isSeniorMode ? 'text-2xl text-[#FF6B00] sm:text-3xl' : 'text-xl text-[#44413A] sm:text-2xl'"
           >
-            {{ isSeniorMode ? '澳門超市醒目選' : '澳門超市格價工具' }}
+            {{ isSeniorMode ? 'AI 採購查價助手' : '澳門超市格價助手' }}
           </h1>
         </div>
 
@@ -141,7 +180,7 @@ onMounted(async () => {
           :class="isSeniorMode ? 'border-[#FF6B00] bg-[#FF6B00] text-white shadow-orange-200' : 'border-[#C4B997] bg-white text-[#8A826F] hover:bg-[#F2F1EC]'"
           @click="toggleMode"
         >
-          <span :class="isSeniorMode ? 'text-base' : 'text-sm'">{{ isSeniorMode ? '切換普通模式' : '長輩模式' }}</span>
+          <span :class="isSeniorMode ? 'text-base' : 'text-sm'">{{ isSeniorMode ? '切換標準模式' : '長者友善模式' }}</span>
         </button>
       </div>
     </header>
@@ -162,7 +201,7 @@ onMounted(async () => {
               isSeniorMode ? 'mb-2 text-2xl text-slate-900' : 'text-xs uppercase tracking-[0.18em] text-[#8A826F]',
             ]"
           >
-            📍 選擇查看區域
+            選擇採集點 / 地區
           </label>
           <select
             v-model="pointCode"
@@ -190,7 +229,7 @@ onMounted(async () => {
           ]"
         >
           <div>
-            <span :class="isSeniorMode ? 'text-base font-bold text-slate-500' : 'text-xs font-semibold uppercase tracking-wide text-[#8A826F]'">數據每週三更新</span>
+            <span :class="isSeniorMode ? 'text-base font-bold text-slate-500' : 'text-xs font-semibold uppercase tracking-wide text-[#8A826F]'">資料更新節奏</span>
             <p :class="isSeniorMode ? 'text-xl font-black text-[#00875A]' : 'mt-1 text-sm font-bold text-[#00875A]'">{{ dataFreshnessLabel }}</p>
           </div>
           <span :class="isSeniorMode ? 'rounded-full bg-white px-4 py-2 text-lg font-black text-slate-700 shadow' : 'mt-2 inline-block rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A]'">
@@ -209,11 +248,23 @@ onMounted(async () => {
       >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 :class="isSeniorMode ? 'text-3xl font-black text-slate-900' : 'text-lg font-bold text-[#44413A]'">
-              {{ isSeniorMode ? '本週抵買推介' : '歷史價格訊號' }}
-            </h2>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 :class="isSeniorMode ? 'text-3xl font-black text-slate-900' : 'text-lg font-bold text-[#44413A]'">
+                歷史價格訊號
+              </h2>
+              <span :class="[
+                'rounded-full px-3 py-1 text-xs font-bold',
+                historicalAvailability.status === 'enough_history'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : historicalAvailability.status === 'not_tracking'
+                    ? 'bg-slate-100 text-slate-600'
+                    : 'bg-amber-50 text-amber-700',
+              ]">
+                {{ historicalAvailability.badge }}
+              </span>
+            </div>
             <p :class="isSeniorMode ? 'mt-1 text-lg font-bold text-slate-600' : 'mt-1 text-sm leading-6 text-[#6E685A]'">
-              {{ isSeniorMode ? '按你選擇的地區，列出近期較抵買的商品。' : '以近期價格走勢輔助判斷採購時機。' }}
+              歷史價格訊號屬輔助資訊，不影響主查價流程。{{ historicalAvailability.status !== 'enough_history' ? '目前僅部分採集點有足夠歷史價格資料。' : '' }}
             </p>
           </div>
           <button
@@ -225,11 +276,11 @@ onMounted(async () => {
             :disabled="loadingHistoricalSignals"
             @click="loadHistoricalSignals"
           >
-            {{ loadingHistoricalSignals ? '更新中...' : '重新整理' }}
+            {{ loadingHistoricalSignals ? '更新中…' : '重新整理' }}
           </button>
         </div>
 
-        <p v-if="loadingHistoricalSignals" :class="isSeniorMode ? 'mt-5 rounded-2xl bg-orange-50 p-4 text-xl font-bold text-[#FF6B00]' : 'mt-4 text-sm text-[#6E685A]'">正在載入價格訊號...</p>
+        <p v-if="loadingHistoricalSignals" :class="isSeniorMode ? 'mt-5 rounded-2xl bg-orange-50 p-4 text-xl font-bold text-[#FF6B00]' : 'mt-4 text-sm text-[#6E685A]'">正在載入歷史價格訊號…</p>
         <p v-else-if="historicalSignalsError" :class="isSeniorMode ? 'mt-5 rounded-2xl bg-yellow-50 p-4 text-xl font-bold text-yellow-900' : 'mt-4 rounded-xl bg-[#F2F1EC] p-3 text-sm text-[#A07A32]'">{{ historicalSignalsError }}</p>
 
         <div v-else-if="historicalSignalItems.length" :class="isSeniorMode ? 'mt-5 grid gap-4' : 'mt-5 overflow-hidden rounded-xl border border-[#E4E1D8]'">
@@ -242,7 +293,7 @@ onMounted(async () => {
               <div class="flex items-start justify-between gap-4">
                 <div>
                   <p class="text-xl font-black text-slate-900">{{ item.product_name }}</p>
-                  <p class="mt-1 text-lg font-bold text-slate-600">{{ signalText(item.signal_type) }}・比平時平咗 {{ percent(item.discount_vs_avg_percent) }}</p>
+                  <p class="mt-1 text-lg font-bold text-slate-600">{{ signalText(item.signal_type) }}，比近期平均低 {{ percent(item.discount_vs_avg_percent) }}</p>
                 </div>
                 <p class="shrink-0 text-4xl font-black tabular-nums text-[#FF6B00]">{{ money(item.current_min_price_mop) }}</p>
               </div>
@@ -253,8 +304,8 @@ onMounted(async () => {
               <tr>
                 <th class="px-4 py-3">商品</th>
                 <th class="px-4 py-3">訊號</th>
-                <th class="px-4 py-3 text-right">現價低位</th>
-                <th class="px-4 py-3 text-right">對比平均</th>
+                <th class="px-4 py-3 text-right">當前低價</th>
+                <th class="px-4 py-3 text-right">較平均低</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-[#E4E1D8] text-[#44413A]">
@@ -268,10 +319,10 @@ onMounted(async () => {
           </table>
         </div>
 
-        <p v-else :class="isSeniorMode ? 'mt-5 rounded-2xl bg-slate-50 p-4 text-lg font-bold text-slate-600' : 'mt-4 text-sm leading-6 text-[#6E685A]'">
-          暫時未有本區價格訊號。
-          <span v-if="historicalSignalWarnings.length" class="mt-1 block">{{ historicalSignalWarnings.join('?') }}</span>
-        </p>
+        <div v-else :class="isSeniorMode ? 'mt-5 rounded-2xl bg-slate-50 p-5 text-lg font-bold text-slate-600' : 'mt-4 rounded-xl bg-[#FBFBFA] p-4 text-sm leading-6 text-[#6E685A]'">
+          <p class="font-semibold text-[#44413A]">{{ historicalAvailability.title }}</p>
+          <p class="mt-2">{{ historicalAvailability.message }}</p>
+        </div>
       </section>
     </div>
   </main>

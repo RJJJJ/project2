@@ -1,395 +1,233 @@
-# 澳門採購決策 Agent MVP
+# Project2：澳門超市格價助手 / AI 採購決策 Agent MVP
 
-本專案是一個本地採購決策 MVP，用 processed JSONL 價格資料，為指定採集點附近約 400 米的購物清單產生採購方案，並提供本區價差訊號。
+基於澳門消費者委員會公開超市價格資料的 AI 採購決策 Agent，可理解自然語言購物清單、處理商品歧義、判斷資料未收錄、比較不同採購策略並生成可解釋方案。
 
-## Live MVP
+## 它解決什麼問題
 
-- Live Web Demo URL: https://project2-three-rho.vercel.app
-- Live API Docs: https://macau-shopping-api.onrender.com/docs
+一般格價工具常見問題是把使用者輸入直接做 keyword search，容易出現危險錯配，例如：
 
-## 商品候選確認
+- `砂糖` 被錯配成 `低糖豆奶`
+- `油` 被錯配成 `麻油味即食麵` 或 `蠔油`
+- `雞蛋` 被錯配成 `雞蛋幼麵`
 
-Web Demo 支援「先選商品規格」：系統會推薦常見規格（例如米類 5公斤 / 10公斤家庭包裝），用戶仍可自行改選或選擇不指定。
+真實用戶也不只會輸入標準商品名，還會輸入：
 
-## 目前功能總覽
+- 口語購物清單
+- 品牌名
+- 不完整商品名
+- 高風險泛詞
+- 主觀問題（例如「最好吃的麵」）
 
-- 多地區比價：以採集點 / 地區切換附近超市價格資料。
-- 商品候選確認：先選商品規格後再生成方案，避免規格誤配。
-- 系統推薦常見規格：候選商品會考慮常見規格、覆蓋與價格。
-- 本區價差訊號：比較同日同區超市價差。
-- 歷史抵買訊號：用 processed historical data 判斷接近低價、低於均價與異常偏高。
-- Watchlist 收藏商品：Web Demo 以 browser localStorage 保存關注商品。
-- Alert Rules 提醒候選：根據關注商品與價格訊號生成「是否值得提醒」候選，不做真正推送。
-- User Testing Readiness：頁面內建「如何使用」、快速測試 examples、feedback localStorage 與錯誤技術詳情。
-- Weekly Demo Data Update：每週 demo data update workflow 產生驗收 report。
+Project2 用 **Query Intent Router + guardrails + RAG v2 + deterministic pricing**，把這些輸入分流到較安全、可解釋的決策路徑。
 
-## 小範圍試用
+## Key capabilities
 
-- 試用說明：[`USER_TESTING_GUIDE.md`](USER_TESTING_GUIDE.md)
-- Demo examples：Web Demo 的「快速測試」提供基本日用品、清潔用品、飲食基本三組測試輸入。
-- Feedback localStorage：`macau-shopping-feedback-v1`，可在 Web Demo 內查看、下載 JSON 或清空。
+- Natural language shopping query
+- Query intent router
+- Ambiguity clarification
+- Not-covered messaging
+- Direct product search
+- Brand search
+- RAG v2 retrieval
+- Deterministic price planner
+- Decision policies
+- Optional LLM / Gemini enhancement
+- Regression pack
+- Catalog confusion audit
+- Manual review workflow
 
-## 本機模式 vs 雲端測試模式
-
-Web Demo 預設使用「本機模式」，watchlist / feedback 保存在 browser localStorage，不需要登入。
-
-v0.9 新增「雲端測試模式」：
-
-- 使用簡單 `user_token` 區分測試用戶，例如 `demo-user-token`。
-- `user_token` 只是 demo token，不是正式登入、密碼、email 或 OAuth。
-- Watchlist 與 alert history 會寫入 backend JSON file：`data/app_state/watchlists.json`。
-- Server-side JSON store 僅供 MVP / App / 推送流程原型測試，正式版應改用持久 DB 與真正 auth。
-
-## 部署後 smoke check
-
-```bash
-python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.onrender.com
-```
-
-Output example:
-
-```json
-{
-  "base_url": "https://macau-shopping-api.onrender.com",
-  "ok": true,
-  "checks": [
-    {"name": "health", "ok": true, "status_code": 200, "error": null}
-  ],
-  "errors": []
-}
-```
-
-## 快速開始
-
-先建立環境設定：
-
-```bash
-copy .env.example .env
-```
-
-檢查本地狀態：
-
-```bash
-python scripts/dev_check.py
-```
-
-Windows 可查看一鍵開發啟動提示：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start_dev.ps1
-```
-
-## 生成 Demo Data
-
-如果尚未有 processed data，先抓取前 5 個採集點：
-
-```bash
-python scripts/fetch_demo_points.py --max-points 5 --preset demo_daily
-```
-
-檢查多地區 MVP 是否可用：
-
-```bash
-python scripts/verify_demo_points.py --max-points 5 --preset demo_daily --write-report
-```
-
-## 啟動 FastAPI
-
-```bash
-python scripts/run_api.py
-```
-
-預設 API base URL：
+## Architecture overview
 
 ```text
-http://127.0.0.1:8000
+User Query
+  -> Query Intent Router
+  -> Guardrails
+  -> Direct / Brand / Category / Basket route
+  -> RAG v2 / Candidate Retrieval
+  -> SQLite Price Planner
+  -> Decision Policy
+  -> Composer
+  -> Frontend Result Panel
+  -> Observation / Review Queue / Regression
 ```
 
-## 啟動 Web Demo
+更多說明見：
 
-```bash
+- [`docs/architecture_overview.md`](docs/architecture_overview.md)
+- [`docs/product_agent_design.md`](docs/product_agent_design.md)
+
+## Data source and limitations
+
+本專案目前使用 **澳門消費者委員會公開監測商品資料**。
+
+這代表：
+
+- 不代表所有超市 SKU
+- 不代表即時庫存
+- 不代表店內促銷完全同步
+- `未收錄` 不代表超市沒有售賣
+- 系統不提供口味、健康、銷量等主觀 / 非資料源支持的結論
+
+詳細限制見：
+
+- [`docs/known_limitations.md`](docs/known_limitations.md)
+
+## Quick start
+
+### Backend（Windows PowerShell）
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pytest -q -p no:cacheprovider
+python scripts\run_api.py
+```
+
+API 預設：
+
+- `http://127.0.0.1:8000`
+- Swagger docs: `http://127.0.0.1:8000/docs`
+
+### Frontend（Windows PowerShell）
+
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-前端預設連接：
+前端預設：
 
-```text
-http://127.0.0.1:8000
-```
+- `http://127.0.0.1:5173`
 
-如需改 API URL，可設定：
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
-```
-
-`frontend/.env.example` 也提供本地前端設定範本：
-
-```text
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-部署到 Vercel 時，請在 Vercel 專案環境變數設定：
-
-```text
-VITE_API_BASE_URL=https://your-render-backend.onrender.com
-```
-
-Render backend 若要允許 Vercel frontend 呼叫，請設定：
-
-```text
-ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
-```
-
-## 啟動 Telegram Bot
-
-先在 `.env` 填入：
-
-```text
-TELEGRAM_BOT_TOKEN=你的 Telegram bot token
-DEFAULT_POINT_CODE=p001
-DEFAULT_DATE=latest
-```
-
-再使用現有 Telegram Bot 入口啟動。常用指令：
-
-```text
-/check 我想買一包米、兩支洗頭水、一包紙巾
-/check p001 我想買一包米、兩支洗頭水
-/signals p001
-/signals p001 10
-/point 高士德
-```
-
-## 多地區驗收
-
-```bash
-python scripts/inspect_collection_points.py
-python scripts/verify_demo_points.py --max-points 5 --preset demo_daily --write-report
-```
-
-報告會輸出到：
-
-```text
-POINT_TEST_REPORT.md
-```
-
-## Web Demo 截圖驗收 Checklist
-
-- API 已啟動：`python scripts/run_api.py`
-- 前端已啟動：`cd frontend && npm run dev`
-- 地區可以載入，並預設顯示 `p001`
-- 點擊「生成採購方案」後可看到推薦方案、總價、建議超市與商品明細
-- 「本區價差訊號」可顯示最多 5 個價差商品卡片
-
-## 常見問題
-
-### Failed to fetch
-
-通常是 backend 未啟動或 API base URL 不一致。先確認：
-
-```bash
-python scripts/run_api.py
-```
-
-再確認前端使用的 `VITE_API_BASE_URL` 是否指向 `http://127.0.0.1:8000`。如果瀏覽器顯示 CORS 錯誤，確認前後端都在本機預期位址啟動。
-
-### 找不到 processed data
-
-先跑 demo data：
-
-```bash
-python scripts/fetch_demo_points.py --max-points 5 --preset demo_daily
-```
-
-再跑：
-
-```bash
-python scripts/dev_check.py
-```
-
-### PowerShell 8009001d
-
-這是本機 PowerShell 啟動或系統憑證相關錯誤。可改用 CMD 執行同樣命令，例如：
-
-```cmd
-python scripts/run_api.py
-cd frontend
-npm run dev
-```
-
-## 更新部署 Demo Data
-
-一條命令抓取前 5 個 collection point 的 `demo_daily` processed data、執行 basket / signals smoke test、生成報告，並同步 Render fallback data：
-
-```bash
-python scripts/update_demo_data.py --max-points 5 --preset demo_daily --sync-demo-data
-```
-
-預設報告輸出：
-
-- `UPDATE_REPORT.md`：建議追蹤，方便部署更新記錄。
-- `data/reports/update_report.json`：本輪作為機器可讀部署報告，可追蹤；如果後續更新太頻繁，也可改為忽略。
-
-部署資料更新完成後：
-
-```bash
-git add demo_data/processed UPDATE_REPORT.md data/reports/update_report.json
-git commit -m "Update demo data"
-git push origin main
-```
-
-注意：不要 commit `data/raw/` 或 `data/processed/`；只 commit `demo_data/processed` 作為線上 demo fallback data。
-
-## 46-point coverage QA
-
-Current active coverage is based on the official 46 `config/collection_points.json` entries at 400m radius. The previous 15-point demo was the v1.0-prep coverage baseline. The coverage workflow is read-only against processed JSONL and does not re-fetch crawler data.
-
-Update the 46 processed points:
-
-```bash
-python scripts/update_demo_data.py --max-points 46 --preset demo_daily
-```
-
-Sync the 46-point fallback demo data when preparing deployment/demo assets:
-
-```bash
-python scripts/update_demo_data.py --max-points 46 --preset demo_daily --sync-demo-data
-```
-
-Generate the coverage report after updating processed data:
-
-```bash
-python scripts/generate_coverage_report.py --max-points 46
-```
-
-Outputs:
-
-- `COVERAGE_REPORT.md` for human QA review.
-- `data/reports/coverage_report.json` for structured QA evidence.
-
-Do not commit `data/raw` or `data/processed`; use the report to inspect coverage quality only.
-
-## SQLite query prototype
-
-Import processed JSONL into the local SQLite foundation database:
-
-```bash
-python scripts/import_processed_to_sqlite.py --date latest --max-points 46
-```
-
-Inspect the SQLite store without changing API defaults:
-
-```bash
-python scripts/query_sqlite_store.py --mode health
-python scripts/query_sqlite_store.py --mode candidates --point-code p001 --keyword 米
-python scripts/query_sqlite_store.py --mode basket --point-code p001 --keyword 米 --keyword 洗頭水
-```
-
-This is a query-service prototype for future optional providers. Existing API routes still use the JSONL path by default.
-
-
-
-
-## Weekly data refresh
-
-Consumer Council price data usually updates every Wednesday. Run the weekly refresh after the Wednesday update to fetch 46 points, validate full category coverage, import SQLite, run smoke checks, and write weekly reports:
-
-```bash
-python scripts/weekly_data_refresh.py --max-points 46 --categories 1-19
-```
-
-Use `--sync-demo-data` only when you intentionally want to update `demo_data/processed` fallback assets. See `docs/WEEKLY_REFRESH.md` for the manual and Windows Task Scheduler workflow.
-
-## D2C-D4A prototypes: SQLite provider, Gemini intent, grounded answer, agent tools
-
-### Optional SQLite provider
-
-The default backend provider remains `jsonl`. To opt into the SQLite prototype for supported API paths only:
+Build：
 
 ```powershell
-$env:PROJECT2_DATA_PROVIDER="sqlite"
-$env:PROJECT2_SQLITE_DB_PATH="data/app_state/project2_dev.sqlite3"
-python scripts/import_processed_to_sqlite.py --date latest --max-points 46
-python scripts/smoke_check_sqlite_provider.py
+cd frontend
+npm run build
 ```
 
-SQLite provider support is intentionally limited and prototype-only. If SQLite is enabled but the DB file is missing, the API returns a clear 503 instead of silently falling back.
+## Demo commands
 
-### Gemini intent parser prototype
-
-Gemini is only used to extract structured intent JSON. It must not generate prices, stores, totals, or product availability. Without `GEMINI_API_KEY`, the parser falls back to deterministic rules:
-
-```bash
-python scripts/parse_intent.py --no-gemini --text "??????????????????????"
-```
-
-### Grounded SQLite answer prototype
-
-Grounded answers are formatted from SQLite query results; facts come from the database, not from Gemini:
-
-```bash
-python scripts/run_grounded_sqlite_answer.py --text "??????????????????????" --point-code p001
-```
-
-### Agent tool demo prototype
-
-Agent tools expose deterministic tool functions for future integration. This is not an autonomous agent loop and does not use LLM tool selection:
-
-```bash
-python scripts/run_agent_tool_demo.py --text "??????????????????????" --provider sqlite --point-code p001
-```
-
-No RAG is used in these prototypes.
-
-## Simple mode / advanced mode
-
-The web demo now defaults to **簡單模式** for ordinary users who only want to know where to buy:
-
-1. Choose a district.
-2. Enter a shopping list.
-3. Click `幫我找最抵買法`.
-
-Simple mode uses larger cards, clearer result wording, optional product specification, and hides technical terms such as `product_oid`, raw ranking details, server/local mode, and alert internals.
-
-**進階模式** keeps the full MVP surface for demos and QA:
-
-- Direct plan generation.
-- Product specification / candidate selection.
-- Detailed price-gap and historical signals.
-- Watchlist and Alert Center.
-- Feedback.
-- Server/local mode and technical diagnostics.
-
-## Current v1.0-prep status
-
-- 15 collection points supported for the demo fallback dataset.
-- Simple Mode is available for senior-friendly, low-technical-wording shopping recommendations.
-- Full category processed data pipeline is available for categories 1-18 / supermarket coverage work.
-- SQLite import and query prototype is available, but SQLite is not the default provider.
-- Weekly refresh workflow is available for manual demo data/report refresh.
-- Render backend + Vercel frontend deployment are supported.
-- Gemini intent parser and Agent tools are prototype-only and not required for the final demo path.
-- Default API behavior remains JSONL-based.
-
-## Final demo validation
+### Agent CLI
 
 ```powershell
-python -m pytest -q -p no:cacheprovider
-python scripts/check_release_hygiene.py
-python scripts/smoke_check_deployment.py --base-url https://macau-shopping-api.onrender.com
-cd frontend
-npm.cmd run build
+python scripts\run_shopping_agent.py ^
+  --query "我想買砂糖同洗頭水" ^
+  --db-path data\app_state\project2_dev.sqlite3 ^
+  --point-code p001 ^
+  --include-price-plan ^
+  --retrieval-mode rag_v2 ^
+  --debug-json
 ```
 
-## Friend testing script
-
-Use messy real-user inputs during friend testing, for example:
-
-```text
-兩包麵 一包薯條 四包薯片 油 糖 M&M
+```powershell
+python scripts\run_shopping_agent.py ^
+  --query "出前一丁麻油味" ^
+  --db-path data\app_state\project2_dev.sqlite3 ^
+  --point-code p001 ^
+  --include-price-plan ^
+  --retrieval-mode rag_v2 ^
+  --debug-json
 ```
 
-Expected behavior: the system should parse space-separated items, show any partial result it can find, and explain missing items in plain language. Missing every requested product is a data/matching limitation, not a frontend system error. More specific names such as `食油`, `薯片`, and `白米` usually work better than very broad words.
+### Regression pack
+
+```powershell
+python scripts\run_agent_regression_pack.py ^
+  --db-path data\app_state\project2_dev.sqlite3 ^
+  --point-code p001 ^
+  --output-dir data\eval ^
+  --catalog-adversarial-cases-path data\eval\catalog_adversarial_cases_reviewed.json
+```
+
+### Catalog confusion audit
+
+```powershell
+python scripts\run_catalog_confusion_audit.py ^
+  --db-path data\app_state\project2_dev.sqlite3 ^
+  --output-dir data\eval ^
+  --generate-adversarial-cases
+```
+
+### Manual review queue export
+
+```powershell
+python scripts\export_catalog_review_queue.py ^
+  --adversarial-cases-path data\eval\catalog_adversarial_cases.json ^
+  --audit-path data\eval\catalog_confusion_audit.json ^
+  --output-csv data\eval\catalog_adversarial_review_queue.csv ^
+  --output-md data\eval\catalog_adversarial_review_queue.md
+```
+
+## Optional LLM setup
+
+LLM / Gemini / Ollama 都是 **optional enhancement**，不是系統必需條件。
+
+### Gemini
+
+- 可用於 `composer_mode=gemini`
+- 可用於 `llm_router_enabled=true`
+- 如果沒有 API key 或呼叫失敗，系統會 fallback 到 deterministic / template 路徑
+
+範例（不要把真實 key 寫進 repo）：
+
+```powershell
+$env:GEMINI_API_KEY="your-key"
+```
+
+### Local LLM / Ollama
+
+- 可用於 `planner_mode=local_llm`
+- 可用於 `llm_router_provider=local_llm`
+- 如果本機模型 / endpoint 不可用，系統應 fallback，不應阻塞基本 demo
+
+## Current validation status
+
+As of latest local validation:
+
+- `pytest`: `340 passed`
+- regression pack with reviewed catalog adversarial cases:
+  - `base_total: 32`
+  - `catalog_adversarial_total: 54`
+  - `active_strict: 12`
+  - `pending_manual_label: 42`
+  - `failed: 0`
+- frontend build: passed
+- review queue export: passed
+- manual review apply workflow: passed
+
+## Portfolio highlights
+
+- Retail taxonomy design for ambiguous grocery queries
+- Data quality guardrails against substring confusion
+- RAG v2 retrieval with deterministic scoring diagnostics
+- Deterministic decision system for store / price planning
+- AI agent orchestration with optional LLM enhancement, not LLM dependency
+- Frontend productization for demo-friendly and reviewer-friendly flows
+
+## Documentation map
+
+- [`docs/architecture_overview.md`](docs/architecture_overview.md)
+- [`docs/agent_api_contract.md`](docs/agent_api_contract.md)
+- [`docs/demo_guide.md`](docs/demo_guide.md)
+- [`docs/final_acceptance.md`](docs/final_acceptance.md)
+- [`docs/known_limitations.md`](docs/known_limitations.md)
+- [`docs/portfolio_summary.md`](docs/portfolio_summary.md)
+- [`docs/catalog_confusion_audit.md`](docs/catalog_confusion_audit.md)
+- [`docs/catalog_manual_review_workflow.md`](docs/catalog_manual_review_workflow.md)
+- [`docs/runbook.md`](docs/runbook.md)
+
+## Known limitations
+
+- Coverage only includes monitored public data, not full supermarket inventory
+- Subjective recommendation queries are intentionally unsupported
+- Cheapest plan depends on monitored products and selected `point_code`
+- Some adversarial catalog cases are still pending manual review
+- LLM features are optional and may fallback
+
+詳見：
+
+- [`docs/known_limitations.md`](docs/known_limitations.md)

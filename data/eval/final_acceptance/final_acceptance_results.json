@@ -1,0 +1,240 @@
+{
+  "summary": {
+    "pytest": "passed",
+    "regression": "passed",
+    "smoke_tests": {
+      "passed": 5,
+      "total": 5,
+      "status": "passed"
+    },
+    "confusion_audit": "passed",
+    "frontend_build": "passed",
+    "overall_status": "passed"
+  },
+  "results": [
+    {
+      "name": "pytest",
+      "kind": "pytest",
+      "returncode": 0,
+      "duration_seconds": 5.2,
+      "stdout_tail": "........................................................................ [ 21%]\n........................................................................ [ 42%]\n........................................................................ [ 63%]\n........................................................................ [ 84%]\n......................................................                   [100%]\n342 passed in 4.43s",
+      "stderr_tail": "Exception ignored in atexit callback <function cleanup_numbered_dir at 0x00000271A324A520>:\nTraceback (most recent call last):\n  File \"D:\\project2\\venv\\Lib\\site-packages\\_pytest\\pathlib.py\", line 374, in cleanup_numbered_dir\n    cleanup_dead_symlinks(root)\n  File \"D:\\project2\\venv\\Lib\\site-packages\\_pytest\\pathlib.py\", line 359, in cleanup_dead_symlinks\n    if not left_dir.resolve().exists():\n  File \"C:\\Users\\acer\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pathlib\\_abc.py\", line 450, in exists\n    self.stat(follow_symlinks=follow_symlinks)\n  File \"C:\\Users\\acer\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pathlib\\_local.py\", line 515, in stat\n    return os.stat(self, follow_symlinks=follow_symlinks)\nPermissionError: [WinError 5] �s���Q�ڡC: 'C:\\\\Users\\\\acer\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-acer\\\\pytest-current'",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed"
+    },
+    {
+      "name": "regression",
+      "kind": "regression",
+      "returncode": 0,
+      "duration_seconds": 1.306,
+      "stdout_tail": "AGENT REGRESSION SUMMARY\nbase_total: 32\ncatalog_adversarial_total: 54\nactive_strict: 12\npending_manual_label: 42\nignored: 0\nneeds_revision: 0\nneeds_data_check: 0\ntotal: 86\npassed: 86\nfailed: 0\npass_rate: 100.0%\noutputs:\n- data\\eval\\agent_regression_results.json\n- data\\eval\\agent_regression_summary.md",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_agent_regression_pack.py",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--output-dir",
+        "data/eval",
+        "--catalog-adversarial-cases-path",
+        "data/eval/catalog_adversarial_cases_reviewed.json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed"
+    },
+    {
+      "name": "smoke_sugar_shampoo",
+      "kind": "smoke",
+      "returncode": 0,
+      "duration_seconds": 0.353,
+      "stdout_tail": "      },\n      \"decision_explanation_zh\": \"??????????????? ???????? MOP 44.30???? 1 ???\",\n      \"warnings\": [],\n      \"diagnostics\": {\n        \"policy\": \"cheapest_single_store\",\n        \"single_store_plan_count\": 11,\n        \"two_store_plan_count\": 11,\n        \"selected_store_count\": 1,\n        \"decision_score\": null,\n        \"thresholds\": {}\n      }\n    }\n  },\n  \"user_message_zh\": \"已根據目前公開監測價格，生成可比較方案。已理解的商品包括：砂糖、洗頭水。最便宜方案：士多鳥拜斯 利豐超市，估算總價 MOP 44.30。\",\n  \"composer_diagnostics\": {\n    \"composer_mode\": \"template\",\n    \"composer_used\": \"template\",\n    \"composer_errors\": []\n  }\n}",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_shopping_agent.py",
+        "--query",
+        "我想買砂糖同洗頭水",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--include-price-plan",
+        "--retrieval-mode",
+        "rag_v2",
+        "--debug-json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed",
+      "smoke_check": {
+        "ok": true,
+        "detail": "status=ok, query_type=basket_optimization",
+        "result_status": "ok",
+        "query_type": "basket_optimization"
+      }
+    },
+    {
+      "name": "smoke_nissin_brand",
+      "kind": "smoke",
+      "returncode": 0,
+      "duration_seconds": 0.23,
+      "stdout_tail": "      },\n      \"decision_explanation_zh\": \"??????????????? ???????? MOP 3.50???? 1 ???\",\n      \"warnings\": [],\n      \"diagnostics\": {\n        \"policy\": \"cheapest_single_store\",\n        \"single_store_plan_count\": 11,\n        \"two_store_plan_count\": 11,\n        \"selected_store_count\": 1,\n        \"decision_score\": null,\n        \"thresholds\": {}\n      }\n    }\n  },\n  \"user_message_zh\": \"你沒有指定口味或規格。我先按目前公開資料中收錄的「品牌」商品比較價格。已根據目前公開監測價格，生成可比較方案。已理解的商品包括：出前一丁。最便宜方案：高士德 新花城超市，估算總價 MOP 3.50。\",\n  \"composer_diagnostics\": {\n    \"composer_mode\": \"template\",\n    \"composer_used\": \"template\",\n    \"composer_errors\": []\n  }\n}",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_shopping_agent.py",
+        "--query",
+        "出前一丁",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--include-price-plan",
+        "--retrieval-mode",
+        "rag_v2",
+        "--debug-json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed",
+      "smoke_check": {
+        "ok": true,
+        "detail": "status=ok, query_type=brand_search",
+        "result_status": "ok",
+        "query_type": "brand_search"
+      }
+    },
+    {
+      "name": "smoke_nissin_sesame",
+      "kind": "smoke",
+      "returncode": 0,
+      "duration_seconds": 0.232,
+      "stdout_tail": "      },\n      \"decision_explanation_zh\": \"??????????????? ???????? MOP 3.50???? 1 ???\",\n      \"warnings\": [],\n      \"diagnostics\": {\n        \"policy\": \"cheapest_single_store\",\n        \"single_store_plan_count\": 11,\n        \"two_store_plan_count\": 11,\n        \"selected_store_count\": 1,\n        \"decision_score\": null,\n        \"thresholds\": {}\n      }\n    }\n  },\n  \"user_message_zh\": \"已按你輸入的商品名稱查價。已根據目前公開監測價格，生成可比較方案。已理解的商品包括：出前一丁麻油味。最便宜方案：高士德 新花城超市，估算總價 MOP 3.50。\",\n  \"composer_diagnostics\": {\n    \"composer_mode\": \"template\",\n    \"composer_used\": \"template\",\n    \"composer_errors\": []\n  }\n}",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_shopping_agent.py",
+        "--query",
+        "出前一丁麻油味",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--include-price-plan",
+        "--retrieval-mode",
+        "rag_v2",
+        "--debug-json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed",
+      "smoke_check": {
+        "ok": true,
+        "detail": "status=ok, query_type=partial_product_search",
+        "result_status": "ok",
+        "query_type": "partial_product_search"
+      }
+    },
+    {
+      "name": "smoke_egg_not_covered",
+      "kind": "smoke",
+      "returncode": 0,
+      "duration_seconds": 0.187,
+      "stdout_tail": "        \"thresholds\": {}\n      },\n      \"status\": \"not_priceable\",\n      \"decision_explanation_zh\": \"????????????????????????\"\n    },\n    \"diagnostics\": {\n      \"priceable_item_count\": 0,\n      \"unpriceable_item_count\": 0,\n      \"ambiguous_count\": 0,\n      \"not_covered_count\": 1,\n      \"plan_count\": 0\n    }\n  },\n  \"user_message_zh\": \"目前輸入的商品未能在公開監測資料中找到可比較價格。暫未收錄：雞蛋。這不代表超市沒有售賣，只代表目前缺少可靠公開價格資料。\",\n  \"composer_diagnostics\": {\n    \"composer_mode\": \"template\",\n    \"composer_used\": \"template\",\n    \"composer_errors\": []\n  }\n}",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_shopping_agent.py",
+        "--query",
+        "雞蛋",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--include-price-plan",
+        "--retrieval-mode",
+        "rag_v2",
+        "--debug-json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed",
+      "smoke_check": {
+        "ok": true,
+        "detail": "status=not_covered, query_type=not_covered_request",
+        "result_status": "not_covered",
+        "query_type": "not_covered_request"
+      }
+    },
+    {
+      "name": "smoke_subjective_noodle",
+      "kind": "smoke",
+      "returncode": 0,
+      "duration_seconds": 0.172,
+      "stdout_tail": "          \"subjective preference token detected\"\n        ]\n      }\n    ],\n    \"needs_clarification\": false,\n    \"clarification_options\": [],\n    \"unsupported_reason\": \"subjective quality data unavailable\",\n    \"reasons\": [\n      \"subjective token in query\",\n      \"subjective preference token detected\"\n    ],\n    \"warnings\": []\n  },\n  \"user_message_zh\": \"我目前主要使用消委會公開價格資料，沒有口味、健康程度或用戶評分資料，因此不能可靠判斷「最好吃」或「最健康」。我可以幫你改為：查最便宜、列出收錄款式，或按品牌 / 類別比較價格。\",\n  \"composer_diagnostics\": {\n    \"composer_mode\": \"template\",\n    \"composer_used\": \"template\",\n    \"composer_errors\": []\n  }\n}",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_shopping_agent.py",
+        "--query",
+        "最好吃的麵",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--point-code",
+        "p001",
+        "--include-price-plan",
+        "--retrieval-mode",
+        "rag_v2",
+        "--debug-json"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed",
+      "smoke_check": {
+        "ok": true,
+        "detail": "status=unsupported, query_type=subjective_recommendation",
+        "result_status": "unsupported",
+        "query_type": "subjective_recommendation"
+      }
+    },
+    {
+      "name": "confusion_audit",
+      "kind": "confusion_audit",
+      "returncode": 0,
+      "duration_seconds": 0.106,
+      "stdout_tail": "CATALOG CONFUSION AUDIT\nproducts_total: 600\nterms_total: 18\nhigh_risk_occurrence_count: 133\nmanual_review_count: 1\noutputs:\n- data\\eval\\catalog_confusion_audit.json\n- data\\eval\\catalog_confusion_audit_summary.md\n- data\\eval\\catalog_adversarial_cases.json",
+      "stderr_tail": "",
+      "command": [
+        "D:\\project2\\venv\\Scripts\\python.exe",
+        "D:\\project2\\scripts\\run_catalog_confusion_audit.py",
+        "--db-path",
+        "data\\app_state\\project2_dev.sqlite3",
+        "--output-dir",
+        "data/eval",
+        "--generate-adversarial-cases"
+      ],
+      "cwd": "D:\\project2",
+      "status": "passed"
+    },
+    {
+      "name": "frontend_build",
+      "kind": "frontend_build",
+      "returncode": 0,
+      "duration_seconds": 2.497,
+      "stdout_tail": "\n> macau-shopping-agent-demo@0.1.0 build\n> node ./node_modules/vite/bin/vite.js build\n\n\u001b[36mvite v6.4.2 \u001b[32mbuilding for production...\u001b[36m\u001b[39m\ntransforming...\n\u001b[32m✓\u001b[39m 13 modules transformed.\nrendering chunks...\ncomputing gzip size...\n\u001b[2mdist/\u001b[22m\u001b[32mindex.html                 \u001b[39m\u001b[1m\u001b[2m 0.43 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  0.31 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[35massets/index-CciVfTFu.css  \u001b[39m\u001b[1m\u001b[2m20.48 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  4.45 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[36massets/index-_vwMiDGN.js   \u001b[39m\u001b[1m\u001b[2m95.77 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip: 35.23 kB\u001b[22m\n\u001b[32m✓ built in 1.49s\u001b[39m",
+      "stderr_tail": "",
+      "command": [
+        "npm.cmd",
+        "run",
+        "build"
+      ],
+      "cwd": "frontend",
+      "status": "passed"
+    }
+  ]
+}

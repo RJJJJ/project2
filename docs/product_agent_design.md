@@ -414,6 +414,97 @@ into draft eval cases. Cases are deduplicated by query and marked
 `needs_manual_label=true`; the regression pack can load them as pending manual
 labels without claiming correctness.
 
+## Phase 6.5: Catalog-wide confusion audit
+
+Sentinel cases such as `雞蛋 -> 雞蛋幼面`, `糖 -> 低糖豆奶`, `油 -> 麻油味即食麵`,
+and `M&M -> 朱古力` are useful, but they only prove a few examples. The catalog
+can still contain many unseen substring collisions. Phase 6.5 adds a deterministic
+catalog-wide audit so we can mine risky classes systematically instead of waiting
+for production mistakes.
+
+### Why this audit exists
+
+- Sentinel cases are point checks; they do not measure whole-catalog confusion.
+- High-risk generic terms (`糖`, `油`, `米`, `麵`, `奶`, `水`, `紙巾`, `朱古力`, `粉`)
+  appear across unrelated product classes.
+- We need repeatable evidence for what should be excluded, clarified, or sent to
+  manual review without giving correctness authority to an LLM.
+
+### Occurrence taxonomy
+
+`services/catalog_confusion_audit.py` classifies every matching occurrence into:
+
+- `true_product`
+- `attribute_only`
+- `flavor_only`
+- `product_type_modifier`
+- `brand_or_name_fragment`
+- `different_category`
+- `ambiguous`
+- `needs_review`
+
+Each occurrence also gets deterministic `risk_level`, `reason`, and
+`suggested_guardrail` (`allow`, `clarify`, `exclude`, `not_covered`, `review`).
+
+### Audit outputs
+
+`scripts/run_catalog_confusion_audit.py` scans the SQLite product catalog and
+writes:
+
+- `data/eval/catalog_confusion_audit.json`
+- `data/eval/catalog_confusion_audit_summary.md`
+- `data/eval/catalog_adversarial_cases.json` (optional)
+
+The audit starts from the default high-risk terms:
+
+`糖, 油, 米, 麵, 面, 奶, 水, 蛋, 雞蛋, 紙, 紙巾, 朱古力, 飲品, 茶, 咖啡, 鹽, 醬, 粉`
+
+### Adversarial case generation
+
+The same module can convert audit findings into regression-ready adversarial
+cases:
+
+- generic risky-term guardrails (`油` should clarify and must not surface `蠔油`)
+- not-covered generic terms (`雞蛋` must not resolve to `雞蛋幼面`)
+- exact-product protection (`麥老大雞蛋幼面` should still behave like direct
+  product search when queried exactly)
+
+Uncertain cases are marked `needs_manual_label=true` instead of failing the
+pack.
+
+### Regression pack integration
+
+`scripts/run_agent_regression_pack.py` accepts:
+
+```powershell
+python scripts\run_agent_regression_pack.py --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --output-dir data\eval --catalog-adversarial-cases-path data\eval\catalog_adversarial_cases.json
+```
+
+Summary output now separates:
+
+- `base_total`
+- `catalog_adversarial_total`
+- `pending_manual_label`
+- `failed`
+
+### Manual review workflow
+
+The first version is intentionally deterministic and conservative:
+
+1. Mine occurrences from the full catalog.
+2. Auto-classify only with explicit heuristics.
+3. Generate strict adversarial cases only when confidence is high.
+4. Send uncertain terms / products to manual review.
+5. Promote reviewed cases into regression protection.
+
+### Limitations
+
+- Name-based heuristics cannot fully understand packaging or merchandising intent.
+- Some borderline classes (`蜜糖`, `糖漿`, `沙律油`, subtype-heavy `朱古力`) still
+  require manual review.
+- The audit does not modify live matching logic by itself; it is an evidence and
+  regression-generation layer unless a clear bug is separately fixed.
+
 ### LLM router evaluation
 
 `scripts/eval_llm_router.py` runs a fixed guardrail set against Gemini or local
@@ -433,3 +524,27 @@ falls back to the template composer with diagnostics.
 LLM components only classify or rewrite the final explanation. SQLite-backed
 catalog retrieval and deterministic price planners remain the only sources of
 product, price, store, total, and decision-policy truth.
+
+## Phase 7: Productization and Demo Readiness
+
+Phase 7 does not add a new core matching capability. It packages the existing
+system for demo, portfolio, and release-readiness use:
+
+- root README rewritten as the main project entry point
+- architecture overview documentation
+- agent API contract documentation
+- demo guide with reviewer-friendly scripted queries
+- final acceptance checklist and acceptance runner
+- known limitations documentation
+- portfolio summary / interview summary
+- runbook for local startup, regression, audit, and optional LLM setup
+
+Related docs:
+
+- `docs/architecture_overview.md`
+- `docs/agent_api_contract.md`
+- `docs/demo_guide.md`
+- `docs/final_acceptance.md`
+- `docs/known_limitations.md`
+- `docs/portfolio_summary.md`
+- `docs/runbook.md`
