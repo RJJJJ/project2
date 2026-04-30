@@ -5,48 +5,17 @@ import { runShoppingAgent } from '../api'
 import AgentResultPanel from './AgentResultPanel.vue'
 
 const props = defineProps({
+  isSenior: { type: Boolean, default: false },
   pointCode: { type: String, default: '' },
   selectedPointName: { type: String, default: '' },
 })
-
-const copy = {
-  title: '\u0041\u0049\u0020\u63a1\u8cfc\u6c7a\u7b56\u0020\u0041\u0067\u0065\u006e\u0074\uff08\u6e2c\u8a66\u7248\uff09',
-  subtitle: '\u8f38\u5165\u81ea\u7136\u8a9e\u8a00\u8cfc\u7269\u6e05\u55ae\uff0c\u7cfb\u7d71\u6703\u5148\u5224\u65b7\u5546\u54c1\u662f\u5426\u6e05\u695a\u3001\u662f\u5426\u5df2\u6536\u9304\uff0c\u518d\u5c0d\u5df2\u78ba\u8a8d\u5546\u54c1\u8a08\u7b97\u53ef\u6bd4\u8f03\u50f9\u683c\u3002',
-  debug: 'Debug mode',
-  pointPrefix: '\u76ee\u524d\u63d0\u8ca8\u9ede\uff1a',
-  pointFallback: '\u672a\u9078\u6642\u6703\u9810\u8a2d\u4f7f\u7528 p001\u3002',
-  queryLabel: '\u8cfc\u7269\u6e05\u55ae',
-  queryPlaceholder: '\u4f8b\u5982\uff1a\u5169\u5305\u9eb5 \u4e00\u5305\u85af\u689d \u56db\u5305\u85af\u7247 \u6cb9 \u7cd6 M&M',
-  loading: '\u6b63\u5728\u5206\u6790\u8cfc\u7269\u6e05\u55ae...',
-  submit: '\u7528 Agent \u5206\u6790',
-  helper: '\u5f8c\u7aef\u6703\u8fd4\u56de structured result\uff0c\u50f9\u683c\u4ecd\u7531 deterministic price planner \u8a08\u7b97\u3002',
-  emptyQuery: '\u8acb\u5148\u8f38\u5165\u8cfc\u7269\u6e05\u55ae\u3002',
-  inputError: '\u8acb\u6aa2\u67e5\u8f38\u5165\u5167\u5bb9\u5f8c\u518d\u8a66\u3002',
-  networkError: '\u66ab\u6642\u7121\u6cd5\u9023\u7dda\u5230\u5f8c\u7aef\u670d\u52d9\u3002',
-  genericError: '\u5206\u6790\u6642\u767c\u751f\u932f\u8aa4\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002',
-  advancedTitle: '\u9032\u968e\u8a2d\u5b9a',
-  advancedHint: '\u9810\u8a2d\u6703\u4f7f\u7528\u5b89\u5168\u6a21\u5f0f\uff1b\u5373\u4f7f Local LLM / Gemini \u5931\u6557\uff0c\u7cfb\u7d71\u4e5f\u6703\u81ea\u52d5 fallback\u3002',
-  plannerMode: 'Planner Mode',
-  retrievalMode: 'Retrieval Mode',
-  composerMode: 'Composer Mode',
-  decisionPolicy: '採購策略 / Decision Policy',
-  thresholdLabel: '兩店方案便宜不超過多少 MOP 時，仍建議一間店',
-  penaltyLabel: '每多去一間店，視作額外成本 MOP',
-}
 
 const query = ref('')
 const loading = ref(false)
 const error = ref('')
 const result = ref(null)
-const debug = ref(false)
 const selectedClarifications = ref({})
 const lastSubmittedQuery = ref('')
-const plannerMode = ref('rule')
-const retrievalMode = ref('taxonomy')
-const composerMode = ref('template')
-const decisionPolicy = ref('cheapest_single_store')
-const singleStoreThresholdMop = ref(5)
-const extraStorePenaltyMop = ref(5)
 
 const effectivePointCode = computed(() => props.pointCode || 'p001')
 const selectedClarificationPayload = computed(() => {
@@ -57,22 +26,21 @@ const selectedClarificationPayload = computed(() => {
   return payload
 })
 const canRecalculate = computed(() => !loading.value && Object.keys(selectedClarificationPayload.value).length > 0)
-const decisionPolicyOptions = computed(() => {
-  if (decisionPolicy.value === 'single_store_preferred') return { single_store_threshold_mop: Number(singleStoreThresholdMop.value) || 5 }
-  if (decisionPolicy.value === 'balanced') return { extra_store_penalty_mop: Number(extraStorePenaltyMop.value) || 5 }
-  return null
-})
 
 function readableAgentError(err) {
-  if (err?.status === 400) return err.message || copy.inputError
-  if (err?.isNetworkError || err?.message?.includes('Failed to fetch')) return copy.networkError
-  return err?.message || copy.genericError
+  if (err?.status === 400) return err.message || '請輸入想格價的商品。'
+  if (err?.isNetworkError || err?.message?.includes('Failed to fetch')) return '暫時連不到價格服務，請稍後再試。'
+  return err?.message || '暫時未能完成格價，請再試一次。'
+}
+
+function setQuickQuery(value) {
+  query.value = value
 }
 
 async function submitAgent({ useClarifications = false } = {}) {
   const trimmedQuery = query.value.trim()
   if (!trimmedQuery) {
-    error.value = copy.emptyQuery
+    error.value = '請先輸入你想買嘅嘢，例如：米、油、雞蛋。'
     result.value = null
     return
   }
@@ -86,12 +54,11 @@ async function submitAgent({ useClarifications = false } = {}) {
       useLlm: false,
       includePricePlan: true,
       priceStrategy: 'cheapest_single_store',
-      decisionPolicy: decisionPolicy.value,
-      decisionPolicyOptions: decisionPolicyOptions.value,
+      decisionPolicy: 'cheapest_single_store',
       clarificationAnswers: useClarifications ? selectedClarificationPayload.value : undefined,
-      plannerMode: plannerMode.value,
-      retrievalMode: retrievalMode.value,
-      composerMode: composerMode.value,
+      plannerMode: 'rule',
+      retrievalMode: 'taxonomy',
+      composerMode: 'template',
     })
     lastSubmittedQuery.value = trimmedQuery
   } catch (err) {
@@ -111,84 +78,90 @@ function selectClarification({ rawItemName, option }) {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h2 class="text-2xl font-semibold text-slate-950">{{ copy.title }}</h2>
-        <p class="mt-2 text-base leading-7 text-slate-700">{{ copy.subtitle }}</p>
+  <section :class="['grid transition-all duration-300', isSenior ? 'gap-8' : 'gap-6']">
+    <div
+      :class="[
+        'transition-all duration-300',
+        isSenior
+          ? 'rounded-[2rem] border-4 border-slate-100 bg-white p-6 shadow-2xl'
+          : 'rounded-2xl border border-[#E4E1D8] bg-white p-5 shadow-sm',
+      ]"
+    >
+      <div :class="['flex flex-wrap items-start justify-between gap-3', isSenior ? 'mb-5' : 'mb-4']">
+        <div>
+          <p v-if="!isSenior" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A826F]">Shopping Mission Analyzer</p>
+          <h2 :class="['font-black transition-all duration-300', isSenior ? 'text-3xl text-slate-900' : 'mt-1 text-xl text-[#44413A]']">
+            {{ isSenior ? '🛒 輸入你想買嘅嘢' : '購物任務分析' }}
+          </h2>
+          <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-600' : 'mt-2 text-sm leading-6 text-[#6E685A]'">
+            {{ isSenior ? '可以直接寫清單，我哋幫你計邊間最抵。' : '輸入自然語言購物清單，系統會比對可用價格並輸出推薦方案。' }}
+          </p>
+        </div>
+        <span :class="isSenior ? 'rounded-full bg-slate-100 px-4 py-2 text-lg font-bold text-slate-700' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A]'">
+          {{ selectedPointName || effectivePointCode }}
+        </span>
       </div>
-      <label class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-sm text-slate-700">
-        <input v-model="debug" type="checkbox" class="h-4 w-4" />
-        {{ copy.debug }}
+
+      <label class="block">
+        <span :class="isSenior ? 'mb-3 block text-xl font-black text-slate-900' : 'mb-2 block text-sm font-semibold text-[#5F5A4D]'">
+          {{ isSenior ? '購物清單：' : '購物清單 / Query' }}
+        </span>
+        <textarea
+          v-model="query"
+          :rows="isSenior ? 5 : 4"
+          placeholder="例如：買米、油、出前一丁、雞蛋"
+          :class="[
+            'w-full resize-y outline-none transition-all duration-300 focus:bg-white',
+            isSenior
+              ? 'min-h-[190px] rounded-2xl border-4 border-slate-200 bg-slate-50 p-5 text-2xl font-bold leading-9 text-slate-900 shadow-inner placeholder:text-slate-400 focus:border-[#FF6B00]'
+              : 'min-h-[120px] rounded-xl border border-[#E4E1D8] bg-[#FBFBFA] px-4 py-3 text-base leading-7 text-[#44413A] placeholder:text-[#8A826F] focus:border-[#C4B997]',
+          ]"
+        />
       </label>
-    </div>
 
-    <div class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-      {{ copy.pointPrefix }}{{ selectedPointName || effectivePointCode }}
-      <span v-if="!pointCode" class="text-slate-500">{{ copy.pointFallback }}</span>
-    </div>
-
-    <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <summary class="cursor-pointer text-sm font-semibold text-slate-900">{{ copy.advancedTitle }}</summary>
-      <p class="mt-2 text-sm text-slate-600">{{ copy.advancedHint }}</p>
-      <div class="mt-4 grid gap-4 md:grid-cols-4">
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.plannerMode }}</span>
-          <select v-model="plannerMode" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
-            <option value="rule">Rule parser</option>
-            <option value="local_llm">Local LLM planner</option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.retrievalMode }}</span>
-          <select v-model="retrievalMode" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
-            <option value="taxonomy">Taxonomy</option>
-            <option value="rag_assisted">RAG-assisted</option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.composerMode }}</span>
-          <select v-model="composerMode" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
-            <option value="template">Template</option>
-            <option value="gemini">Gemini</option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.decisionPolicy }}</span>
-          <select v-model="decisionPolicy" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950">
-            <option value="cheapest_single_store">最平一間店</option>
-            <option value="cheapest_two_stores">最平最多兩間店</option>
-            <option value="single_store_preferred">優先一間店</option>
-            <option value="balanced">平衡價格與少走路</option>
-          </select>
-        </label>
+      <div :class="isSenior ? 'mt-4 flex flex-wrap items-center gap-3' : 'mt-3 flex flex-wrap items-center gap-2'">
+        <span :class="isSenior ? 'text-lg font-black text-slate-500' : 'text-xs font-semibold uppercase tracking-wide text-[#8A826F]'">熱門：</span>
+        <button
+          type="button"
+          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
+          @click="setQuickQuery('出前一丁、米、食油')"
+        >公仔麵／米</button>
+        <button
+          type="button"
+          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
+          @click="setQuickQuery('雞蛋、牛奶、麵包')"
+        >早餐</button>
+        <button
+          type="button"
+          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
+          @click="setQuickQuery('可樂、薯片、餅乾')"
+        >零食飲品</button>
       </div>
-      <div v-if="decisionPolicy === 'single_store_preferred'" class="mt-4 max-w-xl">
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.thresholdLabel }}</span>
-          <input v-model.number="singleStoreThresholdMop" type="number" min="0" step="0.5" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950" />
-        </label>
-      </div>
-      <div v-if="decisionPolicy === 'balanced'" class="mt-4 max-w-xl">
-        <label class="flex flex-col gap-2 text-sm text-slate-700">
-          <span class="font-medium">{{ copy.penaltyLabel }}</span>
-          <input v-model.number="extraStorePenaltyMop" type="number" min="0" step="0.5" class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950" />
-        </label>
-      </div>
-    </details>
 
-    <label class="mt-4 flex flex-col gap-2">
-      <span class="text-base font-medium text-slate-800">{{ copy.queryLabel }}</span>
-      <textarea v-model="query" rows="5" :placeholder="copy.queryPlaceholder" class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-base leading-7 text-slate-950 outline-none focus:border-slate-700" />
-    </label>
-
-    <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <button type="button" class="min-h-12 rounded-xl bg-emerald-700 px-5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400" :disabled="loading" @click="submitAgent()">{{ loading ? copy.loading : copy.submit }}</button>
-      <p class="text-sm text-slate-500">{{ copy.helper }}</p>
+      <button
+        type="button"
+        :class="[
+          'mt-6 w-full font-black transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-400',
+          isSenior
+            ? 'h-20 rounded-[1.5rem] bg-[#FF6B00] text-3xl text-white shadow-[0_8px_0_0_#CC5600] active:translate-y-1 active:shadow-none hover:bg-[#E66000] disabled:shadow-[0_8px_0_0_#64748b]'
+            : 'h-12 rounded-xl bg-[#C4B997] text-base text-white shadow-lg hover:bg-[#B5AA87]',
+        ]"
+        :disabled="loading"
+        @click="submitAgent()"
+      >
+        {{ loading ? (isSenior ? '計緊數...' : '分析中...') : (isSenior ? '幫我格價！' : '分析購物方案') }}
+      </button>
     </div>
 
-    <div class="mt-6">
-      <AgentResultPanel :result="result" :loading="loading" :error="error" :debug="debug" :selected-clarifications="selectedClarifications" :can-recalculate="canRecalculate" @select-clarification="selectClarification" @recalculate="submitAgent({ useClarifications: true })" />
-    </div>
+    <AgentResultPanel
+      :is-senior="isSenior"
+      :result="result"
+      :loading="loading"
+      :error="error"
+      :selected-clarifications="selectedClarifications"
+      :can-recalculate="canRecalculate"
+      @select-clarification="selectClarification"
+      @recalculate="submitAgent({ useClarifications: true })"
+    />
   </section>
 </template>
