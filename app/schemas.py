@@ -35,6 +35,10 @@ class ShoppingAgentRequest(BaseModel):
     retrieval_mode: str = "taxonomy"
     composer_mode: str = "template"
     query_router_mode: str = "hybrid"
+    llm_router_enabled: bool = False
+    llm_router_provider: str = "gemini"
+    llm_router_model: str | None = None
+    llm_router_options: dict[str, Any] | None = None
 
 
 class BasketAskResponse(BaseModel):

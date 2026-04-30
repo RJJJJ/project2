@@ -350,3 +350,86 @@ The router is rule-first and deterministic by default. `query_router_mode=llm`
 is reserved as a future extension, but the LLM must not invent products, prices,
 stock, taste rankings, or health claims. Product matching remains auditable
 catalog search; price decisions remain SQL-backed deterministic planning.
+
+## Phase 6: RAG v2 + optional LLM/Gemini enhancement + evaluation loop
+
+Phase 6 keeps the safe Phase 5 default path, but adds optional enhancement
+surfaces that can be enabled per API/CLI request:
+
+- `llm_router_enabled=false` by default.
+- `retrieval_mode=taxonomy` by default; `rag_assisted` and `rag_v2` are opt-in.
+- `composer_mode=template` by default; Gemini composer is opt-in.
+
+### LLM Router purpose
+
+`services/llm_query_router.py` can ask Gemini or a local Ollama-compatible LLM
+to classify only the query intent. The prompt requires strict JSON matching the
+existing router schema. It forbids price calculation, `product_oid`, database
+availability claims, and final product selection.
+
+### Guarded merge with rule router
+
+The deterministic router always runs first. `merge_rule_and_llm_router_outputs`
+uses a guarded strategy:
+
+- Not-covered terms such as `雞蛋`, `薯條`, and `M&M` cannot be overridden.
+- High-risk short terms such as `糖`, `油`, `米`, `麵`, `面`, `紙巾`, `朱古力`,
+  and `飲品` cannot be auto-resolved without extra clues.
+- Subjective / unsupported LLM classifications are preserved unless the rule
+  result is an exact direct product price query.
+- Low-confidence LLM output is ignored.
+- High-confidence LLM output can fill fields such as `brand`, `category_hint`,
+  `product_clues`, `goal`, and `reasons` when it agrees with the rule route or
+  the rule route is unknown.
+
+All LLM failures fall back to the rule result and are recorded in diagnostics.
+
+### RAG v2 scoring and diagnostics
+
+`services/product_catalog_rag_v2.py` is deterministic and dependency-free. It
+scores candidates with configurable weights:
+
+- exact / normalized / containment name evidence
+- brand and flavor match
+- intent positive terms, synonyms, and token overlap
+- category allowlist as weak supporting evidence only
+- strong negative and missing-flavor penalties
+
+Candidate diagnostics include `retrieval_mode=rag_v2`, `rag_score`,
+`rag_features`, `matched_terms`, `penalties`, and `explanation_zh`. Category
+allowlists cannot qualify a candidate by themselves.
+
+### Brand mining
+
+`services/brand_mining.py` supplements the hand-written brand seeds with
+catalog-derived aliases. It extracts conservative leading Chinese / English
+brand chunks and filters generic product terms such as `即食麵`, `砂糖`, `牛奶`,
+`洗髮乳`, `薯片`, and `紙巾`. The export script writes
+`data/analysis/brand_alias_index.json`.
+
+### Review queue to eval loop
+
+`scripts/build_eval_cases_from_review_queue.py` converts review JSONL records
+into draft eval cases. Cases are deduplicated by query and marked
+`needs_manual_label=true`; the regression pack can load them as pending manual
+labels without claiming correctness.
+
+### LLM router evaluation
+
+`scripts/eval_llm_router.py` runs a fixed guardrail set against Gemini or local
+LLM. It reports exact/acceptable query-type match, fallback count, invalid JSON,
+guardrail violations, and pass rate. Missing API keys or unavailable local LLMs
+produce an output file and exit successfully unless `--strict` is used.
+
+### Gemini composer safety
+
+Gemini composer receives only deterministic `agent_result`. Its prompt forbids
+changing products, prices, supermarkets, totals, or decision policy and requires
+limitations for subjective / unsupported queries. Empty or failed Gemini output
+falls back to the template composer with diagnostics.
+
+### Why LLM does not price or select final products
+
+LLM components only classify or rewrite the final explanation. SQLite-backed
+catalog retrieval and deterministic price planners remain the only sources of
+product, price, store, total, and decision-policy truth.

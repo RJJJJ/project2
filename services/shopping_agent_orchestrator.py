@@ -4,10 +4,13 @@ from pathlib import Path
 from typing import Any
 
 from services.agent_response_composer import compose_agent_response
+from services.brand_mining import build_brand_alias_index
+from services.llm_query_router import merge_rule_and_llm_router_outputs, route_query_with_llm
 from services.local_llm_planner import normalize_planner_items, plan_query_with_local_llm, plan_query_with_rule_fallback, validate_planner_output
 from services.product_candidate_retriever import retrieve_candidates_by_intent
 from services.product_catalog_loader import load_products_from_sqlite
 from services.product_catalog_rag import rag_assisted_retrieve_candidates
+from services.product_catalog_rag_v2 import rag_v2_retrieve_candidates
 from services.product_direct_search import search_brand_products, search_direct_products
 from services.product_intent_resolver import normalize_query_text, resolve_product_intent
 from services.product_intent_taxonomy import PRODUCT_INTENTS
@@ -124,6 +127,14 @@ def _merge_candidates(primary: list[dict[str, Any]], fallback: list[dict[str, An
         oid = str(candidate.get("product_oid") or "")
         key = oid or f"name::{candidate.get('product_name')}"
         if key in seen:
+            for existing in merged:
+                existing_key = str(existing.get("product_oid") or "") or f"name::{existing.get('product_name')}"
+                if existing_key == key:
+                    for diag_key in ("retrieval_mode", "rag_score", "rag_features", "penalties", "explanation_zh"):
+                        if diag_key in candidate and diag_key not in existing:
+                            existing[diag_key] = candidate[diag_key]
+                    existing["matched_terms"] = list(dict.fromkeys([*(existing.get("matched_terms") or []), *(candidate.get("matched_terms") or [])]))
+                    break
             continue
         seen.add(key)
         merged.append(candidate)
@@ -134,6 +145,10 @@ def _merge_candidates(primary: list[dict[str, Any]], fallback: list[dict[str, An
 
 def _retrieve_candidates(products: list[dict[str, Any]], raw_name: str, intent_id: str, retrieval_mode: str, limit: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     taxonomy_candidates = retrieve_candidates_by_intent(products, intent_id, limit=limit)
+    if retrieval_mode == "rag_v2":
+        rag_candidates = rag_v2_retrieve_candidates(products, query=raw_name, intent_id=intent_id, limit=limit)
+        merged_candidates = _merge_candidates(rag_candidates, taxonomy_candidates, limit)
+        return merged_candidates, {"rag_used": True, "rag_candidate_count": len(rag_candidates), "rag_mode": "rag_v2"}
     if retrieval_mode != "rag_assisted":
         return taxonomy_candidates, {"rag_used": False, "rag_candidate_count": 0}
     rag_candidates = rag_assisted_retrieve_candidates(products, query=raw_name, intent_id=intent_id, limit=limit)
@@ -142,21 +157,49 @@ def _retrieve_candidates(products: list[dict[str, Any]], raw_name: str, intent_i
 
 
 def _exploratory_unknown_candidates(products: list[dict[str, Any]], raw_name: str, retrieval_mode: str) -> list[dict[str, Any]]:
+    if retrieval_mode == "rag_v2":
+        return rag_v2_retrieve_candidates(products, query=raw_name, intent_id=None, limit=3)
     if retrieval_mode != "rag_assisted":
         return []
     return rag_assisted_retrieve_candidates(products, query=raw_name, intent_id=None, limit=3)
 
 
-def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template", decision_policy: str | None = None, decision_policy_options: dict[str, Any] | None = None, query_router_mode: str = "hybrid", enable_query_review_queue: bool = False, query_review_path: str | Path = "data/logs/query_review_queue.jsonl") -> dict[str, Any]:
+def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template", decision_policy: str | None = None, decision_policy_options: dict[str, Any] | None = None, query_router_mode: str = "hybrid", enable_query_review_queue: bool = False, query_review_path: str | Path = "data/logs/query_review_queue.jsonl", llm_router_enabled: bool = False, llm_router_provider: str = "gemini", llm_router_model: str | None = None, llm_router_options: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
         products = load_products_from_sqlite(db_path)
+        brand_index = build_brand_alias_index(products)
         parsed_items, planner_output, planner_errors, planner_used = _plan_items(query, planner_mode=planner_mode, local_llm_model=local_llm_model, local_llm_endpoint=local_llm_endpoint)
         normalized_router_mode = query_router_mode if query_router_mode in {"off", "rule", "hybrid", "llm"} else "hybrid"
-        router_decision = route_user_query(query, planner_output=planner_output if normalized_router_mode in {"hybrid", "llm"} else None, use_llm_router=normalized_router_mode == "llm") if normalized_router_mode != "off" else {"query": query, "query_type": "basket_optimization", "confidence": "medium", "items": [], "needs_clarification": False, "clarification_options": [], "unsupported_reason": None, "reasons": ["router disabled"], "warnings": []}
+        router_options = {"brand_index": brand_index}
+        router_options.update(llm_router_options or {})
+        router_decision = route_user_query(query, planner_output=planner_output if normalized_router_mode in {"hybrid", "llm"} else None, use_llm_router=normalized_router_mode == "llm", llm_router_options=router_options) if normalized_router_mode != "off" else {"query": query, "query_type": "basket_optimization", "confidence": "medium", "items": [], "needs_clarification": False, "clarification_options": [], "unsupported_reason": None, "reasons": ["router disabled"], "warnings": []}
+        llm_router_diagnostics: dict[str, Any] = {
+            "llm_router_provider": llm_router_provider,
+            "llm_router_model": llm_router_model,
+            "llm_router_used": "disabled",
+            "llm_router_errors": [],
+            "llm_router_raw_output": None,
+            "router_merge_strategy": "guarded",
+            "router_merge_decision": "disabled",
+        }
+        if llm_router_enabled:
+            llm_result, llm_router_diagnostics = route_query_with_llm(
+                query,
+                planner_output=planner_output,
+                provider=llm_router_provider,
+                model=llm_router_model,
+                api_key=(llm_router_options or {}).get("api_key"),
+                endpoint=(llm_router_options or {}).get("endpoint"),
+                timeout_seconds=int((llm_router_options or {}).get("timeout_seconds") or 20),
+            )
+            router_decision = merge_rule_and_llm_router_outputs(router_decision, llm_result, strategy="guarded")
+            router_decision.setdefault("diagnostics", {}).update({k: v for k, v in llm_router_diagnostics.items() if k.startswith("llm_router_")})
+            router_decision["diagnostics"]["router_merge_strategy"] = (router_decision.get("diagnostics") or {}).get("router_merge_strategy", "guarded")
+            router_decision["diagnostics"]["router_merge_decision"] = (router_decision.get("diagnostics") or {}).get("router_merge_decision", "fallback")
         if normalized_router_mode != "off" and len(parsed_items) == 1 and len(router_decision.get("items") or []) == 1:
             router_raw = str((router_decision["items"][0] or {}).get("raw") or "").strip()
             parsed_raw = str(parsed_items[0].get("raw_text") or parsed_items[0].get("keyword") or "").strip()
-            if router_raw and router_raw != parsed_raw and router_decision.get("query_type") in {"direct_product_search", "partial_product_search", "brand_search", "subjective_recommendation", "unsupported_request", "not_covered_request", "ambiguous_request"}:
+            if router_raw and router_raw != parsed_raw and router_decision.get("query_type") in {"direct_product_search", "partial_product_search", "brand_search", "category_search", "subjective_recommendation", "unsupported_request", "not_covered_request", "ambiguous_request"}:
                 parsed_items = [{"keyword": router_raw, "raw_text": router_raw, "quantity": router_decision["items"][0].get("quantity", 1), "unit": router_decision["items"][0].get("unit")}]
         router_items_by_raw = {str(item.get("raw") or ""): item for item in router_decision.get("items") or []}
         normalized_answers = _normalized_clarification_answers(clarification_answers)
@@ -203,7 +246,15 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 continue
 
             if routed_type in {"direct_product_search", "partial_product_search"}:
-                direct = search_direct_products(products, raw_name, limit=20)
+                if retrieval_mode == "rag_v2":
+                    direct = search_direct_products(products, raw_name, limit=20)
+                    rag_matches = rag_v2_retrieve_candidates(products, query=raw_name, brand=routed_item.get("brand"), category_hint=routed_item.get("category_hint"), limit=20)
+                    direct["matches"] = _merge_candidates(direct.get("matches") or [], rag_matches, 20)
+                    if direct["matches"] and direct.get("confidence") == "low":
+                        direct["confidence"] = "high" if float(direct["matches"][0].get("rag_score") or 0) >= 30 else "medium"
+                        direct["status"] = "partial_match" if direct["confidence"] == "high" else "multiple_candidates"
+                else:
+                    direct = search_direct_products(products, raw_name, limit=20)
                 matches = direct.get("matches") or []
                 if matches and direct.get("confidence") == "high":
                     top_score = float(matches[0].get("match_score") or 0)
@@ -239,7 +290,11 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
 
             if routed_type == "brand_search":
                 brand_term = str(routed_item.get("brand") or raw_name)
-                brand = search_brand_products(products, brand_term, category_hint=routed_item.get("category_hint"), limit=20)
+                if retrieval_mode == "rag_v2":
+                    brand_matches = rag_v2_retrieve_candidates(products, raw_name, brand=brand_term, category_hint=routed_item.get("category_hint"), limit=20)
+                    brand = {"status": "multiple_candidates" if brand_matches else "no_match", "raw_item_name": raw_name, "matches": brand_matches, "confidence": "high" if brand_matches else "low", "reason": "rag_v2 brand retrieval"}
+                else:
+                    brand = search_brand_products(products, brand_term, category_hint=routed_item.get("category_hint"), limit=20)
                 matches = brand.get("matches") or []
                 if matches:
                     resolved_items.append({
@@ -264,6 +319,16 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 else:
                     warnings.append(f"Invalid clarification answer for {raw_name}: {clarification_intent}")
                     resolution = resolve_product_intent(raw_name)
+            elif routed_type == "category_search" and routed_item.get("category_hint") in PRODUCT_INTENTS:
+                resolution = {
+                    "raw_item_name": raw_name,
+                    "normalized_item_name": normalized_name,
+                    "status": "covered",
+                    "intent_id": routed_item.get("category_hint"),
+                    "intent_options": [],
+                    "reason": "query_router_category_hint",
+                    "message_zh": f"已按查詢線索將「{raw_name}」視為「{PRODUCT_INTENTS.get(str(routed_item.get('category_hint')), {}).get('display_name_zh', routed_item.get('category_hint'))}」。",
+                }
             else:
                 resolution = resolve_product_intent(raw_name)
 
@@ -289,7 +354,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 unknown_items.append(enriched | {"message_zh": resolution.get("message_zh"), "risky": True, "exploratory_candidates": [candidate.get("product_name") for candidate in exploratory[:3]]})
 
         normalized_planner_mode = planner_mode if planner_mode in {"rule", "local_llm"} else "rule"
-        normalized_retrieval_mode = retrieval_mode if retrieval_mode in {"taxonomy", "rag_assisted"} else "taxonomy"
+        normalized_retrieval_mode = retrieval_mode if retrieval_mode in {"taxonomy", "rag_assisted", "rag_v2"} else "taxonomy"
         normalized_composer_mode = composer_mode if composer_mode in {"template", "gemini"} else "template"
         status = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, unsupported_items=unsupported_items)
         diagnostics = {
@@ -314,6 +379,9 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             "query_router_mode": normalized_router_mode,
             "query_type": router_decision.get("query_type"),
             "query_confidence": router_decision.get("confidence"),
+            "llm_router_enabled": bool(llm_router_enabled),
+            **{k: v for k, v in llm_router_diagnostics.items() if k != "llm_router_raw_output" or debug},
+            **(router_decision.get("diagnostics") or {}),
         }
         if debug:
             diagnostics["planner_output"] = planner_output

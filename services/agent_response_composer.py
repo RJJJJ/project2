@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from urllib import request
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
@@ -73,19 +74,25 @@ def compose_agent_response_with_gemini(
     model: str | None = None,
     timeout_seconds: int = 20,
 ) -> tuple[str, dict]:
-    diagnostics = {"composer_mode": "gemini", "composer_used": "gemini", "composer_errors": []}
+    started = time.time()
+    diagnostics = {"composer_mode": "gemini", "composer_provider": "gemini", "composer_model": None, "composer_used": "gemini", "composer_errors": [], "composer_fallback_reason": None, "composer_latency_ms": None}
     selected_key = api_key or os.getenv("GEMINI_API_KEY")
     selected_model = model or os.getenv("PROJECT2_GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+    diagnostics["composer_model"] = selected_model
     if not selected_key:
         diagnostics["composer_used"] = "template_fallback"
+        diagnostics["composer_fallback_reason"] = "Missing GEMINI_API_KEY"
         diagnostics["composer_errors"].append("Missing GEMINI_API_KEY")
+        diagnostics["composer_latency_ms"] = round((time.time() - started) * 1000, 2)
         return compose_agent_response_template(agent_result), diagnostics
 
     prompt = (
         "\u4f60\u662f Project2 \u7684\u6700\u7d42\u56de\u8986 composer\u3002"
         "\u4f60\u53ea\u80fd\u6839\u64da\u63d0\u4f9b\u7684 structured agent_result \u751f\u6210\u7528\u6236\u53ef\u8b80\u4e2d\u6587\u3002"
-        "\u4f60\u4e0d\u53ef\u65b0\u589e\u5546\u54c1\u3001\u4e0d\u53ef\u4fee\u6539\u50f9\u683c\u3001\u4e0d\u53ef\u6539\u5beb\u672a\u6536\u9304\u5546\u54c1\u70ba\u5176\u4ed6\u5546\u54c1\u3002"
+        "\u4f60\u4e0d\u53ef\u65b0\u589e\u5546\u54c1\u3001\u4e0d\u53ef\u4fee\u6539\u5546\u54c1\u540d\u7a31\u3001\u4e0d\u53ef\u4fee\u6539\u50f9\u683c\u3001\u4e0d\u53ef\u4fee\u6539\u8d85\u5e02\u540d\u7a31\u3001\u4e0d\u53ef\u4fee\u6539\u7e3d\u50f9\u6216 decision policy\u3002"
+        "\u4e0d\u53ef\u8072\u7a31\u672a\u652f\u63f4\u7684\u53e3\u5473\u3001\u5065\u5eb7\u7a0b\u5ea6\u3001\u7528\u6236\u8a55\u5206\u3001\u5eab\u5b58\u6216\u4eca\u65e5\u7279\u50f9\u8cc7\u8a0a\u3002"
         "\u5982\u679c status \u662f needs_clarification\uff0c\u5fc5\u9808\u660e\u78ba\u8aaa\u660e\u50f9\u683c\u53ea\u5305\u542b\u5df2\u78ba\u8a8d\u5546\u54c1\u3002"
+        "\u5982\u679c query_type \u662f subjective_recommendation \u6216 unsupported_request\uff0c\u5fc5\u9808\u89e3\u91cb\u8cc7\u6599\u9650\u5236\uff0c\u4e26\u63d0\u4f9b\u67e5\u6700\u4fbf\u5b9c\u3001\u5217\u51fa\u6536\u9304\u6b3e\u5f0f\u6216\u6309\u54c1\u724c/\u985e\u5225\u6bd4\u50f9\u7684\u66ff\u4ee3\u64cd\u4f5c\u3002"
         "\u5982\u679c\u5546\u54c1\u66ab\u672a\u6536\u9304\uff0c\u53ea\u80fd\u8aaa\u76ee\u524d\u6c92\u6709\u516c\u958b\u53ef\u6bd4\u8f03\u50f9\u683c\uff0c\u4e0d\u80fd\u8aaa\u5546\u54c1\u4e0d\u5b58\u5728\u3002"
         "\u4e0d\u8981\u8f38\u51fa JSON\uff0c\u4e0d\u8981\u4f7f\u7528 markdown code block\u3002\n\n"
         + json.dumps(agent_result, ensure_ascii=False)
@@ -105,10 +112,13 @@ def compose_agent_response_with_gemini(
         text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
         if not text:
             raise ValueError("Gemini returned empty text")
+        diagnostics["composer_latency_ms"] = round((time.time() - started) * 1000, 2)
         return text, diagnostics
     except Exception as exc:  # pragma: no cover
         diagnostics["composer_used"] = "template_fallback"
+        diagnostics["composer_fallback_reason"] = str(exc)
         diagnostics["composer_errors"].append(str(exc))
+        diagnostics["composer_latency_ms"] = round((time.time() - started) * 1000, 2)
         return compose_agent_response_template(agent_result), diagnostics
 
 

@@ -61,10 +61,15 @@ export async function runShoppingAgent({
   localLlmEndpoint = null,
   retrievalMode = 'taxonomy',
   composerMode = 'template',
+  queryRouterMode = 'hybrid',
+  llmRouterEnabled = false,
+  llmRouterProvider = 'gemini',
+  llmRouterModel = null,
+  llmRouterOptions = null,
 } = {}) {
   const trimmedQuery = String(query || '').trim()
   if (!trimmedQuery) {
-    const apiError = new Error('請輸入購物清單')
+    const apiError = new Error('請輸入查詢內容。')
     apiError.status = 400
     throw apiError
   }
@@ -79,19 +84,22 @@ export async function runShoppingAgent({
       price_strategy: priceStrategy,
       decision_policy: decisionPolicy,
       decision_policy_options: decisionPolicyOptions,
-      ...(clarificationAnswers && Object.keys(clarificationAnswers).length
-        ? { clarification_answers: clarificationAnswers }
-        : {}),
+      ...(clarificationAnswers && Object.keys(clarificationAnswers).length ? { clarification_answers: clarificationAnswers } : {}),
       planner_mode: plannerMode,
       local_llm_model: localLlmModel,
       local_llm_endpoint: localLlmEndpoint,
       retrieval_mode: retrievalMode,
       composer_mode: composerMode,
+      query_router_mode: queryRouterMode,
+      llm_router_enabled: Boolean(llmRouterEnabled),
+      llm_router_provider: llmRouterProvider,
+      llm_router_model: llmRouterModel,
+      llm_router_options: llmRouterOptions,
     }),
   })
 
   if (!data || typeof data !== 'object' || typeof data.status !== 'string') {
-    const apiError = new Error('後端回傳格式錯誤')
+    const apiError = new Error('API 回傳格式不正確。')
     apiError.status = null
     apiError.payload = data
     throw apiError

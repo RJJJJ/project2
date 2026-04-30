@@ -1,0 +1,161 @@
+{
+  "summary": {
+    "generated_at": "2026-04-30T08:57:07.857991+00:00",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "total": 10,
+    "exact_query_type_match": 9,
+    "acceptable_match": 10,
+    "guardrail_violations": 0,
+    "fallback_count": 10,
+    "invalid_json_count": 0,
+    "pass_rate": 100.0,
+    "provider_unavailable": true
+  },
+  "rows": [
+    {
+      "query": "出前一丁",
+      "expected": [
+        "brand_search"
+      ],
+      "actual_query_type": "brand_search",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "出前一丁麻油味",
+      "expected": [
+        "partial_product_search",
+        "direct_product_search"
+      ],
+      "actual_query_type": "partial_product_search",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "麥老大雞蛋幼面",
+      "expected": [
+        "direct_product_search"
+      ],
+      "actual_query_type": "direct_product_search",
+      "confidence": "medium",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "雞蛋",
+      "expected": [
+        "not_covered_request"
+      ],
+      "actual_query_type": "not_covered_request",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "最好吃的麵",
+      "expected": [
+        "subjective_recommendation",
+        "unsupported_request"
+      ],
+      "actual_query_type": "subjective_recommendation",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "糖",
+      "expected": [
+        "ambiguous_request"
+      ],
+      "actual_query_type": "ambiguous_request",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "油",
+      "expected": [
+        "ambiguous_request"
+      ],
+      "actual_query_type": "ambiguous_request",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "BB用嘅濕紙巾",
+      "expected": [
+        "category_search",
+        "partial_product_search"
+      ],
+      "actual_query_type": "category_search",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "維他奶低糖豆奶",
+      "expected": [
+        "direct_product_search",
+        "partial_product_search"
+      ],
+      "actual_query_type": "partial_product_search",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    },
+    {
+      "query": "最便宜的出前一丁",
+      "expected": [
+        "brand_search"
+      ],
+      "actual_query_type": "brand_search",
+      "confidence": "high",
+      "llm_router_used": "fallback",
+      "errors": [
+        "Missing GEMINI_API_KEY"
+      ],
+      "guardrail_violation": null,
+      "passed": true
+    }
+  ]
+}

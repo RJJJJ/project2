@@ -784,5 +784,115 @@
       "query_confidence": "high"
     },
     "failures": []
+  },
+  {
+    "case_id": "phase6_bb_wet_wipe",
+    "query": "BB用嘅濕紙巾",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "category_search",
+        "partial_product_search",
+        "direct_product_search"
+      ],
+      "not_candidate_contains": [
+        "forced_tissue_marker"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "BB用嘅濕紙巾"
+      ],
+      "resolved_intents": [
+        "wet_wipe"
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase6_cheapest_nissin",
+    "query": "最便宜的出前一丁",
+    "passed": true,
+    "expected": {
+      "query_type": "brand_search",
+      "candidate_contains": [
+        "出前一丁"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "出前一丁"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "brand_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase6_vitasoy_low_sugar",
+    "query": "維他奶低糖豆奶",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ],
+      "top_candidate_contains": "維他奶低糖豆奶"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "維他奶低糖豆奶"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "partial_product_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase6_health_drink",
+    "query": "最健康的飲品",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "subjective_recommendation",
+        "unsupported_request"
+      ],
+      "status": "unsupported"
+    },
+    "actual_summary": {
+      "status": "unsupported",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": null,
+      "decision_policy": null,
+      "query_type": "subjective_recommendation",
+      "query_confidence": "high"
+    },
+    "failures": []
   }
 ]

@@ -1,0 +1,14 @@
+[
+  {
+    "query": "糖",
+    "suggested_expected": {
+      "query_type": "ambiguous_request",
+      "status": "needs_clarification",
+      "needs_manual_label": true
+    },
+    "source": "review_queue",
+    "reasons": [
+      "high-risk short generic term"
+    ]
+  }
+]

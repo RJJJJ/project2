@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from services.product_direct_search import BRAND_TERMS, HIGH_RISK_SHORT_TERMS, normalize_product_name_for_lookup, should_try_direct_product_search
+from services.brand_mining import detect_brand_query
 
 
 QUERY_TYPES = {
@@ -71,6 +72,10 @@ def route_item_intent(raw_item_name: str, context: dict | None = None) -> dict:
     goal = _goal(str((context or {}).get("query") or raw))
     reasons: list[str] = []
     brand = next((brand for brand in BRAND_TERMS if normalize_product_name_for_lookup(brand) == normalized or normalize_product_name_for_lookup(brand) in normalized), None)
+    brand_index = (context or {}).get("brand_index") or {}
+    mined_brand = detect_brand_query(raw, brand_index) if brand_index else {"matched": False}
+    if not brand and mined_brand.get("matched"):
+        brand = str(mined_brand.get("brand") or "")
 
     query_type = "unknown"
     confidence = "low"
@@ -101,15 +106,20 @@ def route_item_intent(raw_item_name: str, context: dict | None = None) -> dict:
         confidence = "high"
         unsupported_reason = "requested signal is not in current data source"
         reasons.append("unsupported data token detected")
-    elif brand and normalized == normalize_product_name_for_lookup(brand):
+    elif brand and normalized == normalize_product_name_for_lookup(brand) and (not mined_brand.get("matched") or mined_brand.get("confidence") == "high"):
         query_type = "brand_search"
-        confidence = "high"
+        confidence = "high" if (not mined_brand.get("matched") or mined_brand.get("confidence") == "high") else "medium"
         reasons.append("brand-only query")
-    elif brand and should_try_direct_product_search(raw):
+    elif brand and should_try_direct_product_search(raw) and normalized != normalize_product_name_for_lookup(brand):
         query_type = "partial_product_search"
         confidence = "high"
         product_clues = [brand]
         reasons.append("brand plus product/flavor clues")
+    elif "濕紙巾" in raw and ("BB" in raw.upper() or "嬰" in raw or "用" in raw):
+        query_type = "category_search"
+        confidence = "high"
+        category_hint = "wet_wipe"
+        reasons.append("wet wipe category clue")
     elif raw in CATEGORY_TERMS or normalized in {normalize_product_name_for_lookup(term) for term in CATEGORY_TERMS}:
         query_type = "category_search"
         confidence = "high"
@@ -141,7 +151,7 @@ def route_item_intent(raw_item_name: str, context: dict | None = None) -> dict:
     }
 
 
-def classify_query_type(query: str, raw_items: list[dict] | None = None) -> dict:
+def classify_query_type(query: str, raw_items: list[dict] | None = None, context: dict | None = None) -> dict:
     text = str(query or "").strip()
     clean = _clean_single_query(text)
     reasons: list[str] = []
@@ -152,7 +162,7 @@ def classify_query_type(query: str, raw_items: list[dict] | None = None) -> dict
     items = raw_items or [{"raw": clean or text, "quantity": 1, "unit": None}]
     if len(items) > 1:
         return {"query_type": "basket_optimization", "confidence": "high", "reasons": ["multiple shopping items"]}
-    item_decision = route_item_intent(str(items[0].get("raw") or clean or text), {"query": text, **items[0]})
+    item_decision = route_item_intent(str(items[0].get("raw") or clean or text), {"query": text, **items[0], **(context or {})})
     reasons.extend(item_decision.get("reasons") or [])
     return {"query_type": item_decision["query_type"], "confidence": item_decision["confidence"], "reasons": reasons}
 
@@ -173,13 +183,14 @@ def build_router_decision(query_type: str, confidence: str, raw_items: list[dict
 
 
 def route_user_query(query: str, planner_output: dict | None = None, use_llm_router: bool = False, llm_router_options: dict | None = None) -> dict:
+    context_options = llm_router_options or {}
     planner_items = _raw_items_from_planner(query, planner_output)
     clean_query = _clean_single_query(query)
     if len(planner_items) == 1 and clean_query and clean_query != planner_items[0].get("raw") and not re.search(r"[，,、\s]", clean_query):
         planner_items = [{"raw": clean_query, "quantity": planner_items[0].get("quantity") or 1, "unit": planner_items[0].get("unit")}]
 
-    routed_items = [route_item_intent(str(item.get("raw") or ""), {"query": query, **item}) for item in planner_items]
-    classification = classify_query_type(query, routed_items)
+    routed_items = [route_item_intent(str(item.get("raw") or ""), {"query": query, **item, **context_options}) for item in planner_items]
+    classification = classify_query_type(query, routed_items, context_options)
     query_type = classification["query_type"]
     confidence = classification["confidence"]
     reasons = [*classification.get("reasons", [])]

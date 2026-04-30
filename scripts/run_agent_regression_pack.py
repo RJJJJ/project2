@@ -80,8 +80,29 @@ def build_cases(include_rag_cases: bool = True, include_local_llm_cases: bool = 
             _case("phase5_cheapest_nissin", "\u6700\u4fbf\u5b9c\u7684\u51fa\u524d\u4e00\u4e01", {"query_type": "brand_search", "candidate_contains": ["\u51fa\u524d\u4e00\u4e01"]}),
             _case("phase5_vitasoy_brand", "\u7dad\u4ed6\u5976", {"query_type": "brand_search", "candidate_contains": ["\u7dad\u4ed6\u5976"], "not_candidate_contains": ["forced_low_sugar_marker"]}),
             _case("phase5_vitasoy_low_sugar", "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976", {"query_type_in": ["direct_product_search", "partial_product_search"], "top_candidate_contains": "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976"}),
+            _case("phase6_bb_wet_wipe", "BB用嘅\u6fd5\u7d19\u5dfe", {"query_type_in": ["category_search", "partial_product_search", "direct_product_search"], "not_candidate_contains": ["forced_tissue_marker"]}),
+            _case("phase6_cheapest_nissin", "\u6700\u4fbf\u5b9c\u7684\u51fa\u524d\u4e00\u4e01", {"query_type": "brand_search", "candidate_contains": ["\u51fa\u524d\u4e00\u4e01"]}),
+            _case("phase6_vitasoy_low_sugar", "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976", {"query_type_in": ["direct_product_search", "partial_product_search"], "top_candidate_contains": "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976"}),
+            _case("phase6_health_drink", "\u6700\u5065\u5eb7\u7684\u98f2\u54c1", {"query_type_in": ["subjective_recommendation", "unsupported_request"], "status": "unsupported"}),
         ]
     )
+    return cases
+
+
+def load_extra_cases(path: str | None) -> list[dict[str, Any]]:
+    if not path:
+        return []
+    extra_path = Path(path)
+    if not extra_path.exists():
+        return []
+    data = json.loads(extra_path.read_text(encoding="utf-8"))
+    cases: list[dict[str, Any]] = []
+    for idx, item in enumerate(data if isinstance(data, list) else []):
+        query = str(item.get("query") or "").strip()
+        if not query:
+            continue
+        expected = item.get("suggested_expected") or {}
+        cases.append({"case_id": f"review_queue_{idx + 1}", "query": query, "expected": expected, "overrides": {}, "pending_manual_label": bool(expected.get("needs_manual_label"))})
     return cases
 
 
@@ -151,6 +172,7 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
 def write_summary(path: Path, rows: list[dict[str, Any]], modes: dict[str, Any]) -> None:
     total = len(rows)
     passed = sum(1 for row in rows if row["passed"])
+    pending = sum(1 for row in rows if row.get("pending_manual_label"))
     failed = total - passed
     pass_rate = 0 if total == 0 else round(passed / total * 100, 2)
     failed_rows = [row for row in rows if not row["passed"]]
@@ -161,6 +183,7 @@ def write_summary(path: Path, rows: list[dict[str, Any]], modes: dict[str, Any])
         f"total: {total}",
         f"passed: {passed}",
         f"failed: {failed}",
+        f"pending_manual_label: {pending}",
         f"pass_rate: {pass_rate}%",
         f"modes used: `{json.dumps(modes, ensure_ascii=False)}`",
         "",
@@ -180,17 +203,25 @@ def main() -> int:
     parser.add_argument("--point-code", default="p001")
     parser.add_argument("--output-dir", default="data/eval")
     parser.add_argument("--planner-mode", default="rule", choices=["rule", "local_llm"])
-    parser.add_argument("--retrieval-mode", default="taxonomy", choices=["taxonomy", "rag_assisted"])
+    parser.add_argument("--retrieval-mode", default="taxonomy", choices=["taxonomy", "rag_assisted", "rag_v2"])
     parser.add_argument("--composer-mode", default="template", choices=["template", "gemini"])
+    parser.add_argument("--llm-router-enabled", action="store_true")
+    parser.add_argument("--llm-router-provider", default="gemini", choices=["gemini", "local_llm"])
+    parser.add_argument("--llm-router-model", default=None)
     parser.add_argument("--decision-policy", default="cheapest_single_store", choices=["cheapest_single_store", "cheapest_two_stores", "single_store_preferred", "balanced"])
     parser.add_argument("--include-rag-cases", action="store_true")
     parser.add_argument("--include-local-llm-cases", action="store_true")
+    parser.add_argument("--extra-cases-path", default=None)
     args = parser.parse_args()
 
     include_rag = True or args.include_rag_cases
     cases = build_cases(include_rag_cases=include_rag, include_local_llm_cases=args.include_local_llm_cases)
+    cases.extend(load_extra_cases(args.extra_cases_path))
     rows: list[dict[str, Any]] = []
     for case in cases:
+        if case.get("pending_manual_label"):
+            rows.append({"case_id": case["case_id"], "query": case["query"], "passed": True, "pending_manual_label": True, "expected": case["expected"], "actual_summary": {}, "failures": []})
+            continue
         overrides = dict(case.get("overrides") or {})
         result = run_shopping_agent(
             case["query"],
@@ -201,6 +232,9 @@ def main() -> int:
             retrieval_mode=overrides.get("retrieval_mode", args.retrieval_mode),
             composer_mode=args.composer_mode,
             decision_policy=args.decision_policy,
+            llm_router_enabled=args.llm_router_enabled,
+            llm_router_provider=args.llm_router_provider,
+            llm_router_model=args.llm_router_model,
         )
         passed, failures, actual_summary = evaluate_case(case, result)
         rows.append({"case_id": case["case_id"], "query": case["query"], "passed": passed, "expected": case["expected"], "actual_summary": actual_summary, "failures": failures})
@@ -210,16 +244,18 @@ def main() -> int:
     results_path = output_dir / "agent_regression_results.json"
     summary_path = output_dir / "agent_regression_summary.md"
     results_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-    modes = {"planner_mode": args.planner_mode, "retrieval_mode": args.retrieval_mode, "composer_mode": args.composer_mode, "decision_policy": args.decision_policy}
+    modes = {"planner_mode": args.planner_mode, "retrieval_mode": args.retrieval_mode, "composer_mode": args.composer_mode, "decision_policy": args.decision_policy, "llm_router_enabled": args.llm_router_enabled}
     write_summary(summary_path, rows, modes)
     total = len(rows)
     passed = sum(1 for row in rows if row["passed"])
+    pending = sum(1 for row in rows if row.get("pending_manual_label"))
     failed = total - passed
     pass_rate = 0 if total == 0 else round(passed / total * 100, 2)
     print("AGENT REGRESSION SUMMARY")
     print(f"total: {total}")
     print(f"passed: {passed}")
     print(f"failed: {failed}")
+    print(f"pending_manual_label: {pending}")
     print(f"pass_rate: {pass_rate}%")
     print("outputs:")
     print(f"- {results_path}")

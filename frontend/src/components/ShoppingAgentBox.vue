@@ -17,6 +17,13 @@ const result = ref(null)
 const selectedClarifications = ref({})
 const lastSubmittedQuery = ref('')
 
+const showAdvanced = ref(false)
+const retrievalMode = ref('taxonomy')
+const composerMode = ref('template')
+const llmRouterEnabled = ref(false)
+const llmRouterProvider = ref('gemini')
+const llmRouterModel = ref('')
+
 const effectivePointCode = computed(() => props.pointCode || 'p001')
 const selectedClarificationPayload = computed(() => {
   const payload = {}
@@ -28,9 +35,9 @@ const selectedClarificationPayload = computed(() => {
 const canRecalculate = computed(() => !loading.value && Object.keys(selectedClarificationPayload.value).length > 0)
 
 function readableAgentError(err) {
-  if (err?.status === 400) return err.message || '請輸入想格價的商品。'
-  if (err?.isNetworkError || err?.message?.includes('Failed to fetch')) return '暫時連不到價格服務，請稍後再試。'
-  return err?.message || '暫時未能完成格價，請再試一次。'
+  if (err?.status === 400) return err.message || '請檢查輸入內容。'
+  if (err?.isNetworkError || err?.message?.includes('Failed to fetch')) return '暫時連不到服務，請稍後再試。'
+  return err?.message || '格價時發生錯誤，請稍後再試。'
 }
 
 function setQuickQuery(value) {
@@ -40,7 +47,7 @@ function setQuickQuery(value) {
 async function submitAgent({ useClarifications = false } = {}) {
   const trimmedQuery = query.value.trim()
   if (!trimmedQuery) {
-    error.value = '請先輸入你想買嘅嘢，例如：米、油、雞蛋。'
+    error.value = '請輸入想買的商品，例如：砂糖、洗頭水、出前一丁。'
     result.value = null
     return
   }
@@ -51,14 +58,16 @@ async function submitAgent({ useClarifications = false } = {}) {
     result.value = await runShoppingAgent({
       query: trimmedQuery,
       pointCode: effectivePointCode.value,
-      useLlm: false,
       includePricePlan: true,
       priceStrategy: 'cheapest_single_store',
       decisionPolicy: 'cheapest_single_store',
       clarificationAnswers: useClarifications ? selectedClarificationPayload.value : undefined,
       plannerMode: 'rule',
-      retrievalMode: 'taxonomy',
-      composerMode: 'template',
+      retrievalMode: retrievalMode.value,
+      composerMode: composerMode.value,
+      llmRouterEnabled: llmRouterEnabled.value,
+      llmRouterProvider: llmRouterProvider.value,
+      llmRouterModel: llmRouterModel.value || null,
     })
     lastSubmittedQuery.value = trimmedQuery
   } catch (err) {
@@ -94,7 +103,7 @@ function selectClarification({ rawItemName, option }) {
             {{ isSenior ? '🛒 輸入你想買嘅嘢' : '購物任務分析' }}
           </h2>
           <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-600' : 'mt-2 text-sm leading-6 text-[#6E685A]'">
-            {{ isSenior ? '可以直接寫清單，我哋幫你計邊間最抵。' : '輸入自然語言購物清單，系統會比對可用價格並輸出推薦方案。' }}
+            {{ isSenior ? '可以直接寫清單，我幫你格價。' : '輸入商品或購物清單，系統會先理解任務，再查公開價格資料。' }}
           </p>
         </div>
         <span :class="isSenior ? 'rounded-full bg-slate-100 px-4 py-2 text-lg font-bold text-slate-700' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A]'">
@@ -109,7 +118,7 @@ function selectClarification({ rawItemName, option }) {
         <textarea
           v-model="query"
           :rows="isSenior ? 5 : 4"
-          placeholder="例如：買米、油、出前一丁、雞蛋"
+          placeholder="例：兩包麵、一支油、洗頭水"
           :class="[
             'w-full resize-y outline-none transition-all duration-300 focus:bg-white',
             isSenior
@@ -121,21 +130,47 @@ function selectClarification({ rawItemName, option }) {
 
       <div :class="isSenior ? 'mt-4 flex flex-wrap items-center gap-3' : 'mt-3 flex flex-wrap items-center gap-2'">
         <span :class="isSenior ? 'text-lg font-black text-slate-500' : 'text-xs font-semibold uppercase tracking-wide text-[#8A826F]'">熱門：</span>
-        <button
-          type="button"
-          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
-          @click="setQuickQuery('出前一丁、米、食油')"
-        >公仔麵／米</button>
-        <button
-          type="button"
-          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
-          @click="setQuickQuery('雞蛋、牛奶、麵包')"
-        >早餐</button>
-        <button
-          type="button"
-          :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'"
-          @click="setQuickQuery('可樂、薯片、餅乾')"
-        >零食飲品</button>
+        <button type="button" :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'" @click="setQuickQuery('出前一丁麻油味')">出前一丁</button>
+        <button type="button" :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'" @click="setQuickQuery('我想買砂糖同洗頭水')">砂糖/洗頭水</button>
+        <button type="button" :class="isSenior ? 'rounded-full bg-orange-50 px-4 py-2 text-lg font-black text-[#FF6B00] shadow transition active:scale-95' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-xs font-semibold text-[#6E685A] hover:bg-[#E4E1D8]'" @click="setQuickQuery('BB用嘅濕紙巾')">BB濕紙巾</button>
+      </div>
+
+      <div class="mt-4">
+        <button type="button" class="text-sm font-bold text-[#8A826F] underline" @click="showAdvanced = !showAdvanced">
+          {{ showAdvanced ? '收起進階設定' : '進階設定' }}
+        </button>
+        <div v-if="showAdvanced" class="mt-3 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2">
+          <label class="grid gap-1 font-bold text-slate-700">
+            Retrieval Mode
+            <select v-model="retrievalMode" class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <option value="taxonomy">Taxonomy</option>
+              <option value="rag_assisted">RAG v1</option>
+              <option value="rag_v2">RAG v2</option>
+            </select>
+          </label>
+          <label class="grid gap-1 font-bold text-slate-700">
+            Composer
+            <select v-model="composerMode" class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <option value="template">Template</option>
+              <option value="gemini">Gemini</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-2 font-bold text-slate-700">
+            <input v-model="llmRouterEnabled" type="checkbox" class="h-5 w-5" />
+            Use AI router
+          </label>
+          <label class="grid gap-1 font-bold text-slate-700">
+            Router Provider
+            <select v-model="llmRouterProvider" class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <option value="gemini">Gemini</option>
+              <option value="local_llm">Local LLM</option>
+            </select>
+          </label>
+          <label class="grid gap-1 font-bold text-slate-700 sm:col-span-2">
+            Router Model (optional)
+            <input v-model="llmRouterModel" class="rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="gemini-2.5-flash / qwen3:4b" />
+          </label>
+        </div>
       </div>
 
       <button
@@ -143,7 +178,7 @@ function selectClarification({ rawItemName, option }) {
         :class="[
           'mt-6 w-full font-black transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-400',
           isSenior
-            ? 'h-20 rounded-[1.5rem] bg-[#FF6B00] text-3xl text-white shadow-[0_8px_0_0_#CC5600] active:translate-y-1 active:shadow-none hover:bg-[#E66000] disabled:shadow-[0_8px_0_0_#64748b]'
+            ? 'h-20 rounded-[1.5rem] bg-[#FF6B00] text-3xl text-white shadow-[0_8px_0_0_#CC5600] active:translate-y-1 active:shadow-none hover:bg-[#E66000]'
             : 'h-12 rounded-xl bg-[#C4B997] text-base text-white shadow-lg hover:bg-[#B5AA87]',
         ]"
         :disabled="loading"
