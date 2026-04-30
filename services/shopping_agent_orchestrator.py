@@ -8,17 +8,20 @@ from services.local_llm_planner import normalize_planner_items, plan_query_with_
 from services.product_candidate_retriever import retrieve_candidates_by_intent
 from services.product_catalog_loader import load_products_from_sqlite
 from services.product_catalog_rag import rag_assisted_retrieve_candidates
+from services.product_direct_search import search_brand_products, search_direct_products
 from services.product_intent_resolver import normalize_query_text, resolve_product_intent
 from services.product_intent_taxonomy import PRODUCT_INTENTS
+from services.query_intent_router import route_user_query
 
 
-def _candidate_summary(raw_name: str, intent_id: str, candidates: list[dict[str, Any]]) -> dict[str, Any]:
+def _candidate_summary(raw_name: str, intent_id: str | None, candidates: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
     return {
         "raw_item_name": raw_name,
         "intent_id": intent_id,
-        "intent_display_name_zh": PRODUCT_INTENTS.get(intent_id, {}).get("display_name_zh", intent_id),
+        "intent_display_name_zh": PRODUCT_INTENTS.get(intent_id or "", {}).get("display_name_zh", intent_id),
         "candidates_count": len(candidates),
         "top_candidates": candidates[:5],
+        **extra,
     }
 
 
@@ -26,7 +29,9 @@ def _clarification_options(intent_options: list[str]) -> list[dict[str, str]]:
     return [{"intent_id": intent_id, "label_zh": str(PRODUCT_INTENTS.get(intent_id, {}).get("display_name_zh") or intent_id)} for intent_id in intent_options]
 
 
-def _status(resolved_items: list[dict[str, Any]], ambiguous_items: list[dict[str, Any]], not_covered_items: list[dict[str, Any]], unknown_items: list[dict[str, Any]], price_plan: dict[str, Any] | None = None) -> str:
+def _status(resolved_items: list[dict[str, Any]], ambiguous_items: list[dict[str, Any]], not_covered_items: list[dict[str, Any]], unknown_items: list[dict[str, Any]], price_plan: dict[str, Any] | None = None, unsupported_items: list[dict[str, Any]] | None = None) -> str:
+    if unsupported_items:
+        return "unsupported"
     if ambiguous_items:
         return "needs_clarification"
     if price_plan:
@@ -142,15 +147,24 @@ def _exploratory_unknown_candidates(products: list[dict[str, Any]], raw_name: st
     return rag_assisted_retrieve_candidates(products, query=raw_name, intent_id=None, limit=3)
 
 
-def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template", decision_policy: str | None = None, decision_policy_options: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None = None, use_llm: bool = False, debug: bool = False, include_price_plan: bool = False, price_strategy: str = "cheapest_single_store", max_candidates_per_item: int = 5, clarification_answers: dict[str, str] | None = None, planner_mode: str = "rule", local_llm_model: str | None = None, local_llm_endpoint: str | None = None, retrieval_mode: str = "taxonomy", composer_mode: str = "template", decision_policy: str | None = None, decision_policy_options: dict[str, Any] | None = None, query_router_mode: str = "hybrid", enable_query_review_queue: bool = False, query_review_path: str | Path = "data/logs/query_review_queue.jsonl") -> dict[str, Any]:
     try:
         products = load_products_from_sqlite(db_path)
         parsed_items, planner_output, planner_errors, planner_used = _plan_items(query, planner_mode=planner_mode, local_llm_model=local_llm_model, local_llm_endpoint=local_llm_endpoint)
+        normalized_router_mode = query_router_mode if query_router_mode in {"off", "rule", "hybrid", "llm"} else "hybrid"
+        router_decision = route_user_query(query, planner_output=planner_output if normalized_router_mode in {"hybrid", "llm"} else None, use_llm_router=normalized_router_mode == "llm") if normalized_router_mode != "off" else {"query": query, "query_type": "basket_optimization", "confidence": "medium", "items": [], "needs_clarification": False, "clarification_options": [], "unsupported_reason": None, "reasons": ["router disabled"], "warnings": []}
+        if normalized_router_mode != "off" and len(parsed_items) == 1 and len(router_decision.get("items") or []) == 1:
+            router_raw = str((router_decision["items"][0] or {}).get("raw") or "").strip()
+            parsed_raw = str(parsed_items[0].get("raw_text") or parsed_items[0].get("keyword") or "").strip()
+            if router_raw and router_raw != parsed_raw and router_decision.get("query_type") in {"direct_product_search", "partial_product_search", "brand_search", "subjective_recommendation", "unsupported_request", "not_covered_request", "ambiguous_request"}:
+                parsed_items = [{"keyword": router_raw, "raw_text": router_raw, "quantity": router_decision["items"][0].get("quantity", 1), "unit": router_decision["items"][0].get("unit")}]
+        router_items_by_raw = {str(item.get("raw") or ""): item for item in router_decision.get("items") or []}
         normalized_answers = _normalized_clarification_answers(clarification_answers)
 
         resolved_items: list[dict[str, Any]] = []
         ambiguous_items: list[dict[str, Any]] = []
         not_covered_items: list[dict[str, Any]] = []
+        unsupported_items: list[dict[str, Any]] = []
         unknown_items: list[dict[str, Any]] = []
         candidate_summary: list[dict[str, Any]] = []
         warnings: list[str] = []
@@ -161,8 +175,88 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             raw_name = str(item.get("raw_text") or item.get("keyword") or "").strip()
             if not raw_name:
                 continue
+            routed_item = router_items_by_raw.get(raw_name) or next((value for key, value in router_items_by_raw.items() if normalize_query_text(key) == normalize_query_text(raw_name)), {})
+            routed_type = str(routed_item.get("query_type") or router_decision.get("query_type") or "")
+            if router_decision.get("query_type") in {"subjective_recommendation", "unsupported_request"}:
+                routed_type = str(router_decision.get("query_type"))
             normalized_name = normalize_query_text(raw_name)
             clarification_intent = normalized_answers.get(normalized_name)
+
+            if routed_type in {"subjective_recommendation", "unsupported_request"}:
+                unsupported_items.append({
+                    "raw_item_name": raw_name,
+                    "quantity": item.get("quantity", 1),
+                    "unit": item.get("unit"),
+                    "query_type": routed_type,
+                    "message_zh": "目前資料主要是公開價格資料，沒有口味、健康程度、銷量、庫存或用戶評分資料，不能可靠判斷這類問題。",
+                    "unsupported_reason": routed_item.get("unsupported_reason") or router_decision.get("unsupported_reason"),
+                })
+                continue
+
+            if routed_type == "not_covered_request":
+                resolution = {
+                    "status": "not_covered",
+                    "reason": "query_router_not_covered",
+                    "message_zh": f"目前公開價格資料暫未收錄「{raw_name}」的可靠可比較價格。",
+                }
+                not_covered_items.append({"raw_item_name": raw_name, "quantity": item.get("quantity", 1), "unit": item.get("unit"), "resolution": resolution, "message_zh": resolution["message_zh"], "query_type": routed_type})
+                continue
+
+            if routed_type in {"direct_product_search", "partial_product_search"}:
+                direct = search_direct_products(products, raw_name, limit=20)
+                matches = direct.get("matches") or []
+                if matches and direct.get("confidence") == "high":
+                    top_score = float(matches[0].get("match_score") or 0)
+                    pricing_matches = [match for match in matches if float(match.get("match_score") or 0) >= max(0.88, top_score - 0.05)]
+                    resolved_items.append({
+                        "raw_item_name": raw_name,
+                        "quantity": item.get("quantity", 1),
+                        "unit": item.get("unit"),
+                        "intent_id": None,
+                        "intent_display_name_zh": None,
+                        "query_type": routed_type,
+                        "direct_search_status": direct.get("status"),
+                        "candidates_count": len(pricing_matches),
+                        "resolution_reason": direct.get("reason"),
+                    })
+                    candidate_summary.append(_candidate_summary(raw_name, None, pricing_matches, query_type=routed_type, direct_search={**direct, "matches": pricing_matches}))
+                    continue
+                if matches:
+                    ambiguous_items.append({
+                        "raw_item_name": raw_name,
+                        "quantity": item.get("quantity", 1),
+                        "unit": item.get("unit"),
+                        "query_type": routed_type,
+                        "message_zh": "我找到幾個相近商品，請確認是否是你想找的。",
+                        "clarification_options": [
+                            {"intent_id": str(match.get("product_oid")), "label_zh": str(match.get("product_name") or match.get("product_oid"))}
+                            for match in matches[:5]
+                        ],
+                        "direct_search": direct,
+                    })
+                    candidate_summary.append(_candidate_summary(raw_name, None, matches, query_type=routed_type, direct_search=direct))
+                    continue
+
+            if routed_type == "brand_search":
+                brand_term = str(routed_item.get("brand") or raw_name)
+                brand = search_brand_products(products, brand_term, category_hint=routed_item.get("category_hint"), limit=20)
+                matches = brand.get("matches") or []
+                if matches:
+                    resolved_items.append({
+                        "raw_item_name": raw_name,
+                        "quantity": item.get("quantity", 1),
+                        "unit": item.get("unit"),
+                        "intent_id": None,
+                        "intent_display_name_zh": None,
+                        "query_type": "brand_search",
+                        "brand": brand_term,
+                        "goal": routed_item.get("goal"),
+                        "candidates_count": len(matches),
+                        "resolution_reason": brand.get("reason"),
+                    })
+                    candidate_summary.append(_candidate_summary(raw_name, None, matches, query_type="brand_search", direct_search=brand))
+                    warnings.append(f"你未指定「{brand_term}」的口味或規格，因此系統先在目前收錄的品牌商品中找最低價。")
+                    continue
 
             if clarification_intent:
                 if clarification_intent in PRODUCT_INTENTS:
@@ -197,7 +291,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
         normalized_planner_mode = planner_mode if planner_mode in {"rule", "local_llm"} else "rule"
         normalized_retrieval_mode = retrieval_mode if retrieval_mode in {"taxonomy", "rag_assisted"} else "taxonomy"
         normalized_composer_mode = composer_mode if composer_mode in {"template", "gemini"} else "template"
-        status = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items)
+        status = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, unsupported_items=unsupported_items)
         diagnostics = {
             "products_loaded": len(products),
             "items_parsed": len(parsed_items),
@@ -205,6 +299,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             "ambiguous_count": len(ambiguous_items),
             "not_covered_count": len(not_covered_items),
             "unknown_count": len(unknown_items),
+            "unsupported_count": len(unsupported_items),
             "llm_planner_enabled": bool(use_llm),
             "debug": bool(debug),
             "clarification_answers_count": len(normalized_answers),
@@ -216,12 +311,15 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             "rag_candidate_counts": rag_candidate_counts,
             "composer_mode": normalized_composer_mode,
             "decision_policy": decision_policy or price_strategy,
+            "query_router_mode": normalized_router_mode,
+            "query_type": router_decision.get("query_type"),
+            "query_confidence": router_decision.get("confidence"),
         }
         if debug:
             diagnostics["planner_output"] = planner_output
 
-        result = {"query": query, "point_code": point_code, "use_llm": use_llm, "status": status, "resolved_items": resolved_items, "ambiguous_items": ambiguous_items, "not_covered_items": not_covered_items, "unknown_items": unknown_items, "candidate_summary": candidate_summary, "warnings": warnings, "diagnostics": diagnostics}
-        if include_price_plan:
+        result = {"query": query, "point_code": point_code, "use_llm": use_llm, "status": status, "resolved_items": resolved_items, "ambiguous_items": ambiguous_items, "not_covered_items": not_covered_items, "unsupported_items": unsupported_items, "unknown_items": unknown_items, "candidate_summary": candidate_summary, "warnings": warnings, "diagnostics": diagnostics, "query_router": router_decision}
+        if include_price_plan and status != "unsupported":
             from services.shopping_agent_price_adapter import build_agent_price_plan
             price_plan = build_agent_price_plan(
                 result,
@@ -233,7 +331,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 decision_policy_options=decision_policy_options,
             )
             result["price_plan"] = price_plan
-            result["status"] = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, price_plan)
+            result["status"] = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, price_plan, unsupported_items=unsupported_items)
             result["diagnostics"]["price_plan_status"] = price_plan.get("status")
 
         user_message_zh, composer_diagnostics = compose_agent_response(result, composer_mode=normalized_composer_mode)
@@ -241,6 +339,9 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
         result["composer_diagnostics"] = composer_diagnostics
         result["diagnostics"]["composer_used"] = composer_diagnostics.get("composer_used")
         result["diagnostics"]["composer_errors"] = composer_diagnostics.get("composer_errors") or []
+        if enable_query_review_queue:
+            from services.query_review_queue import append_query_review_record, build_query_review_record
+            append_query_review_record(build_query_review_record(result), query_review_path)
         return result
     except Exception as exc:  # pragma: no cover
         fallback_result = {"query": query, "point_code": point_code, "use_llm": use_llm, "status": "error", "resolved_items": [], "ambiguous_items": [], "not_covered_items": [], "unknown_items": [], "candidate_summary": [], "warnings": [], "diagnostics": {"error": str(exc)}}

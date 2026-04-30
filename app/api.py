@@ -237,6 +237,7 @@ def shopping_agent(request: ShoppingAgentRequest) -> dict[str, Any]:
         local_llm_endpoint=request.local_llm_endpoint,
         retrieval_mode=request.retrieval_mode,
         composer_mode=request.composer_mode,
+        query_router_mode=request.query_router_mode,
         decision_policy=request.decision_policy or request.price_strategy,
         decision_policy_options=request.decision_policy_options,
     )

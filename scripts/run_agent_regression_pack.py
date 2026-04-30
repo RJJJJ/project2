@@ -68,6 +68,20 @@ def build_cases(include_rag_cases: bool = True, include_local_llm_cases: bool = 
         cases.append(_case("rag_sugar_shampoo", "\u6211\u60f3\u8cb7\u6d17\u982d\u6c34\u540c\u7802\u7cd6", {"status": "ok", "resolved_contains": [U["white_sugar"], U["shampoo"]], "candidate_contains": [U["taikoo"]], "not_candidate_contains": [U["sauce1"], U["sauce2"], U["sauce3"]]}, retrieval_mode="rag_assisted"))
     if include_local_llm_cases:
         cases.append(_case("local_llm_fallback_sugar", U["white_sugar"], {"resolved_intents": ["cooking_sugar"]}, planner_mode="local_llm"))
+    cases.extend(
+        [
+            _case("phase5_brand_nissin", "\u51fa\u524d\u4e00\u4e01", {"query_type": "brand_search", "not_status": ["needs_clarification", "not_covered"], "candidate_contains": ["\u51fa\u524d\u4e00\u4e01"]}),
+            _case("phase5_nissin_sesame", "\u51fa\u524d\u4e00\u4e01\u9ebb\u6cb9\u5473", {"query_type_in": ["direct_product_search", "partial_product_search"], "top_candidate_contains": "\u9ebb\u6cb9\u5473", "top_candidate_not_contains": "\u4e5d\u5dde\u6fc3\u6e6f\u8c6c\u9aa8"}),
+            _case("phase5_mak_lo_dai_egg_noodle", "\u9ea5\u8001\u5927\u96de\u86cb\u5e7c\u9762", {"query_type": "direct_product_search", "not_status": ["not_covered"], "top_candidate_contains": "\u9ea5\u8001\u5927\u96de\u86cb\u5e7c\u9762"}),
+            _case("phase5_egg_not_covered", "\u96de\u86cb", {"query_type": "not_covered_request", "status": "not_covered", "not_candidate_contains": ["\u9ea5\u8001\u5927\u96de\u86cb\u5e7c\u9762"]}),
+            _case("phase5_noodle_ambiguous", "\u9eb5", {"query_type": "ambiguous_request", "status": "needs_clarification"}),
+            _case("phase5_noodle_simplified_ambiguous", "\u9762", {"query_type": "ambiguous_request", "status": "needs_clarification"}),
+            _case("phase5_subjective_noodle", "\u6700\u597d\u5403\u7684\u9eb5", {"query_type_in": ["subjective_recommendation", "unsupported_request"], "status": "unsupported"}),
+            _case("phase5_cheapest_nissin", "\u6700\u4fbf\u5b9c\u7684\u51fa\u524d\u4e00\u4e01", {"query_type": "brand_search", "candidate_contains": ["\u51fa\u524d\u4e00\u4e01"]}),
+            _case("phase5_vitasoy_brand", "\u7dad\u4ed6\u5976", {"query_type": "brand_search", "candidate_contains": ["\u7dad\u4ed6\u5976"], "not_candidate_contains": ["forced_low_sugar_marker"]}),
+            _case("phase5_vitasoy_low_sugar", "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976", {"query_type_in": ["direct_product_search", "partial_product_search"], "top_candidate_contains": "\u7dad\u4ed6\u5976\u4f4e\u7cd6\u8c46\u5976"}),
+        ]
+    )
     return cases
 
 
@@ -80,8 +94,15 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
     intents = _resolved_intents(result)
     candidate_text = _candidate_text(result)
     price_plan = result.get("price_plan") or {}
+    router = result.get("query_router") or {}
     if expected.get("status") and result.get("status") != expected["status"]:
         failures.append(f"status expected {expected['status']} got {result.get('status')}")
+    if expected.get("not_status") and result.get("status") in expected["not_status"]:
+        failures.append(f"status should not be in {expected['not_status']} got {result.get('status')}")
+    if expected.get("query_type") and router.get("query_type") != expected["query_type"]:
+        failures.append(f"query_type expected {expected['query_type']} got {router.get('query_type')}")
+    if expected.get("query_type_in") and router.get("query_type") not in expected["query_type_in"]:
+        failures.append(f"query_type expected in {expected['query_type_in']} got {router.get('query_type')}")
     if expected.get("price_plan_status") and price_plan.get("status") != expected["price_plan_status"]:
         failures.append(f"price_plan.status expected {expected['price_plan_status']} got {price_plan.get('status')}")
     if expected.get("price_plan_status_in") and price_plan.get("status") not in expected["price_plan_status_in"]:
@@ -104,6 +125,15 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
     for needle in expected.get("not_candidate_contains", []):
         if needle in candidate_text:
             failures.append(f"candidate text should not contain {needle}")
+    if expected.get("top_candidate_contains") or expected.get("top_candidate_not_contains"):
+        top_candidate = ""
+        summaries = result.get("candidate_summary") or []
+        if summaries and (summaries[0].get("top_candidates") or []):
+            top_candidate = str(summaries[0]["top_candidates"][0].get("product_name") or "")
+        if expected.get("top_candidate_contains") and expected["top_candidate_contains"] not in top_candidate:
+            failures.append(f"top candidate missing {expected['top_candidate_contains']} got {top_candidate}")
+        if expected.get("top_candidate_not_contains") and expected["top_candidate_not_contains"] in top_candidate:
+            failures.append(f"top candidate should not contain {expected['top_candidate_not_contains']} got {top_candidate}")
     actual_summary = {
         "status": result.get("status"),
         "resolved": resolved,
@@ -112,6 +142,8 @@ def evaluate_case(case: dict[str, Any], result: dict[str, Any]) -> tuple[bool, l
         "not_covered": not_covered,
         "price_plan_status": price_plan.get("status"),
         "decision_policy": (price_plan.get("decision_result") or {}).get("policy"),
+        "query_type": router.get("query_type"),
+        "query_confidence": router.get("confidence"),
     }
     return not failures, failures, actual_summary
 

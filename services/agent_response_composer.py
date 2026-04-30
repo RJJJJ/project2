@@ -9,6 +9,8 @@ DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 def compose_agent_response_template(agent_result: dict) -> str:
     status = str(agent_result.get("status") or "error")
+    router = agent_result.get("query_router") or {}
+    query_type = str(router.get("query_type") or "")
     resolved_items = list(agent_result.get("resolved_items") or [])
     ambiguous_items = list(agent_result.get("ambiguous_items") or [])
     not_covered_items = list(agent_result.get("not_covered_items") or [])
@@ -17,6 +19,18 @@ def compose_agent_response_template(agent_result: dict) -> str:
     best_plan = (decision_result.get("best_recommendation") or price_plan.get("best_plan") or {})
 
     parts: list[str] = []
+    if query_type == "subjective_recommendation":
+        return "我目前主要使用消委會公開價格資料，沒有口味、健康程度或用戶評分資料，因此不能可靠判斷「最好吃」或「最健康」。我可以幫你改為：查最便宜、列出收錄款式，或按品牌 / 類別比較價格。"
+    if query_type == "unsupported_request":
+        return "目前資料主要是公開價格資料，未包含銷量、庫存、即日特價、健康程度或用戶評分，因此不能可靠回答這類問題。我可以改為幫你查公開價格、列出收錄款式或比較同類商品。"
+    if query_type == "brand_search":
+        parts.append("你沒有指定口味或規格。我先按目前公開資料中收錄的「品牌」商品比較價格。")
+    elif query_type in {"direct_product_search", "partial_product_search"}:
+        if any((summary.get("direct_search") or {}).get("confidence") == "medium" for summary in agent_result.get("candidate_summary") or []):
+            parts.append("我找到幾個相近商品，請確認是否是你想找的。")
+        else:
+            parts.append("已按你輸入的商品名稱查價。")
+
     if status == "ok":
         parts.append("\u5df2\u6839\u64da\u76ee\u524d\u516c\u958b\u76e3\u6e2c\u50f9\u683c\uff0c\u751f\u6210\u53ef\u6bd4\u8f03\u65b9\u6848\u3002")
     elif status == "needs_clarification":
@@ -25,6 +39,8 @@ def compose_agent_response_template(agent_result: dict) -> str:
         parts.append("\u90e8\u5206\u5546\u54c1\u5df2\u53ef\u8a08\u50f9\uff0c\u90e8\u5206\u5546\u54c1\u66ab\u672a\u6536\u9304\u6216\u9700\u8981\u78ba\u8a8d\u3002")
     elif status == "not_covered":
         parts.append("\u76ee\u524d\u8f38\u5165\u7684\u5546\u54c1\u672a\u80fd\u5728\u516c\u958b\u76e3\u6e2c\u8cc7\u6599\u4e2d\u627e\u5230\u53ef\u6bd4\u8f03\u50f9\u683c\u3002")
+    elif status == "unsupported":
+        parts.append("目前資料不支持這類判斷。")
     else:
         parts.append("\u5206\u6790\u6642\u767c\u751f\u932f\u8aa4\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002")
 

@@ -18,7 +18,9 @@
       ],
       "not_covered": [],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -50,7 +52,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -73,7 +77,9 @@
       ],
       "not_covered": [],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -101,7 +107,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -124,7 +132,9 @@
       ],
       "not_covered": [],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -148,7 +158,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -171,7 +183,9 @@
       ],
       "not_covered": [],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -195,7 +209,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -218,7 +234,9 @@
       ],
       "not_covered": [],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -242,7 +260,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -266,7 +286,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "category_search",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -289,7 +311,9 @@
         "M&M"
       ],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "not_covered_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -312,7 +336,9 @@
         "薯條"
       ],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "not_covered_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -338,7 +364,9 @@
         "雞蛋"
       ],
       "price_plan_status": "not_priceable",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "not_covered_request",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -379,7 +407,9 @@
         "M&M"
       ],
       "price_plan_status": "needs_clarification",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "basket_optimization",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -408,7 +438,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "basket_optimization",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -440,7 +472,9 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "basket_optimization",
+      "query_confidence": "high"
     },
     "failures": []
   },
@@ -476,7 +510,278 @@
       "ambiguous": [],
       "not_covered": [],
       "price_plan_status": "ok",
-      "decision_policy": "cheapest_single_store"
+      "decision_policy": "cheapest_single_store",
+      "query_type": "basket_optimization",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_brand_nissin",
+    "query": "出前一丁",
+    "passed": true,
+    "expected": {
+      "query_type": "brand_search",
+      "not_status": [
+        "needs_clarification",
+        "not_covered"
+      ],
+      "candidate_contains": [
+        "出前一丁"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "出前一丁"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "brand_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_nissin_sesame",
+    "query": "出前一丁麻油味",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ],
+      "top_candidate_contains": "麻油味",
+      "top_candidate_not_contains": "九州濃湯豬骨"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "出前一丁麻油味"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "partial_product_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_mak_lo_dai_egg_noodle",
+    "query": "麥老大雞蛋幼面",
+    "passed": true,
+    "expected": {
+      "query_type": "direct_product_search",
+      "not_status": [
+        "not_covered"
+      ],
+      "top_candidate_contains": "麥老大雞蛋幼面"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "麥老大雞蛋幼面"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "direct_product_search",
+      "query_confidence": "medium"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_egg_not_covered",
+    "query": "雞蛋",
+    "passed": true,
+    "expected": {
+      "query_type": "not_covered_request",
+      "status": "not_covered",
+      "not_candidate_contains": [
+        "麥老大雞蛋幼面"
+      ]
+    },
+    "actual_summary": {
+      "status": "not_covered",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [
+        "雞蛋"
+      ],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "not_covered_request",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_noodle_ambiguous",
+    "query": "麵",
+    "passed": true,
+    "expected": {
+      "query_type": "ambiguous_request",
+      "status": "needs_clarification"
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "麵"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_noodle_simplified_ambiguous",
+    "query": "面",
+    "passed": true,
+    "expected": {
+      "query_type": "ambiguous_request",
+      "status": "needs_clarification"
+    },
+    "actual_summary": {
+      "status": "needs_clarification",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [
+        "面"
+      ],
+      "not_covered": [],
+      "price_plan_status": "not_priceable",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "ambiguous_request",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_subjective_noodle",
+    "query": "最好吃的麵",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "subjective_recommendation",
+        "unsupported_request"
+      ],
+      "status": "unsupported"
+    },
+    "actual_summary": {
+      "status": "unsupported",
+      "resolved": [],
+      "resolved_intents": [],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": null,
+      "decision_policy": null,
+      "query_type": "subjective_recommendation",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_cheapest_nissin",
+    "query": "最便宜的出前一丁",
+    "passed": true,
+    "expected": {
+      "query_type": "brand_search",
+      "candidate_contains": [
+        "出前一丁"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "出前一丁"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "brand_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_vitasoy_brand",
+    "query": "維他奶",
+    "passed": true,
+    "expected": {
+      "query_type": "brand_search",
+      "candidate_contains": [
+        "維他奶"
+      ],
+      "not_candidate_contains": [
+        "forced_low_sugar_marker"
+      ]
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "維他奶"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "brand_search",
+      "query_confidence": "high"
+    },
+    "failures": []
+  },
+  {
+    "case_id": "phase5_vitasoy_low_sugar",
+    "query": "維他奶低糖豆奶",
+    "passed": true,
+    "expected": {
+      "query_type_in": [
+        "direct_product_search",
+        "partial_product_search"
+      ],
+      "top_candidate_contains": "維他奶低糖豆奶"
+    },
+    "actual_summary": {
+      "status": "ok",
+      "resolved": [
+        "維他奶低糖豆奶"
+      ],
+      "resolved_intents": [
+        ""
+      ],
+      "ambiguous": [],
+      "not_covered": [],
+      "price_plan_status": "ok",
+      "decision_policy": "cheapest_single_store",
+      "query_type": "partial_product_search",
+      "query_confidence": "high"
     },
     "failures": []
   }

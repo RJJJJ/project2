@@ -34,6 +34,7 @@ class ShoppingAgentRequest(BaseModel):
     local_llm_endpoint: str | None = None
     retrieval_mode: str = "taxonomy"
     composer_mode: str = "template"
+    query_router_mode: str = "hybrid"
 
 
 class BasketAskResponse(BaseModel):

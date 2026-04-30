@@ -23,6 +23,10 @@ const resolvedItems = computed(() => props.result?.resolved_items || [])
 const ambiguousItems = computed(() => props.result?.ambiguous_items || [])
 const notCoveredItems = computed(() => props.result?.not_covered_items || [])
 const decisionResult = computed(() => props.result?.price_plan?.decision_result || null)
+const routerDecision = computed(() => props.result?.query_router || null)
+const queryType = computed(() => routerDecision.value?.query_type || '')
+const routerConfidence = computed(() => routerDecision.value?.confidence || '')
+const routerReasons = computed(() => routerDecision.value?.reasons || [])
 const bestPlan = computed(() => decisionResult.value?.best_recommendation || props.result?.price_plan?.best_plan || null)
 const alternatives = computed(() => {
   const plans = decisionResult.value?.alternatives || []
@@ -65,6 +69,14 @@ function planDifference(plan) {
   if (!bestPlan.value?.estimated_total_mop || !plan?.estimated_total_mop) return 'N/A'
   return formatMoney(Number(plan.estimated_total_mop) - Number(bestPlan.value.estimated_total_mop))
 }
+
+function routerNoticeText() {
+  if (queryType.value === 'brand_search') return '你沒有指定口味 / 規格，以下先列出目前收錄的相關品牌商品。'
+  if (queryType.value === 'direct_product_search') return '已按你輸入的商品名稱查價。'
+  if (queryType.value === 'partial_product_search') return bestPlan.value ? `已找到相近商品：${itemDisplayName((bestPlan.value.items || [])[0] || {})}` : '我找到幾個相近商品，請選擇是否正確。'
+  if (queryType.value === 'subjective_recommendation') return '目前沒有口味 / 健康 / 評分資料。你可以改為查最便宜、列出收錄款式，或指定品牌查價。'
+  return ''
+}
 </script>
 
 <template>
@@ -101,6 +113,30 @@ function planDifference(plan) {
 
     <template v-else>
       <div :class="isSenior ? 'space-y-6' : 'space-y-5'">
+        <section
+          v-if="routerNoticeText()"
+          :class="isSenior ? 'rounded-[2rem] border-4 border-orange-100 bg-orange-50 p-5 text-xl font-black text-slate-900 shadow-lg' : 'rounded-2xl border border-[#E4E1D8] bg-[#F2F1EC] p-4 text-sm font-semibold text-[#5F5A4D]'"
+        >
+          {{ routerNoticeText() }}
+          <div v-if="queryType === 'subjective_recommendation'" :class="isSenior ? 'mt-4 grid gap-3 text-lg' : 'mt-3 flex flex-wrap gap-2 text-xs'">
+            <span :class="isSenior ? 'rounded-2xl bg-white px-4 py-3 shadow' : 'rounded-full bg-white px-3 py-1'">查最便宜</span>
+            <span :class="isSenior ? 'rounded-2xl bg-white px-4 py-3 shadow' : 'rounded-full bg-white px-3 py-1'">列出收錄款式</span>
+            <span :class="isSenior ? 'rounded-2xl bg-white px-4 py-3 shadow' : 'rounded-full bg-white px-3 py-1'">指定品牌查價</span>
+          </div>
+        </section>
+
+        <details v-if="!isSenior && routerDecision" class="rounded-2xl border border-[#E4E1D8] bg-white p-4 text-sm shadow-sm">
+          <summary class="cursor-pointer font-semibold text-[#8A826F]">Debug: Query Router</summary>
+          <div class="mt-3 grid gap-2 text-[#5F5A4D] sm:grid-cols-3">
+            <div>query_type: {{ queryType }}</div>
+            <div>confidence: {{ routerConfidence }}</div>
+            <div>needs_review: {{ ['unknown', 'subjective_recommendation', 'unsupported_request'].includes(queryType) || routerConfidence === 'low' }}</div>
+          </div>
+          <ul class="mt-3 list-disc pl-5 text-xs leading-5 text-[#6E685A]">
+            <li v-for="reason in routerReasons" :key="reason">{{ reason }}</li>
+          </ul>
+        </details>
+
         <template v-if="!isSenior">
           <section class="overflow-hidden rounded-2xl border border-[#E4E1D8] bg-white shadow-sm">
             <div class="flex flex-col gap-3 border-b border-[#E4E1D8] bg-[#F2F1EC] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

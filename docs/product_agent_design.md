@@ -267,3 +267,86 @@ The Agent advanced controls now include Decision Policy:
 - 平衡價格與少走路 (`balanced`)
 
 Normal mode shows user-facing store names, store count, totals, item purchase locations, explanation text, and up to two alternatives. Debug mode shows policy diagnostics and raw `decision_result`. Internal `product_oid`, `supermarket_oid`, and intent IDs remain debug-only implementation details.
+
+## Phase 5: Query Intelligence Router + Confidence + Review Queue
+
+### Why Query Intent Router is needed
+
+Real grocery queries are not always category names. Users may type a brand
+(`出前一丁`), a near-product phrase (`出前一丁麻油味`), a full product name
+(`麥老大雞蛋幼面`), a risky generic word (`麵`), or an unsupported preference
+question (`最好吃的麵`). Phase 5 adds a deterministic router before product
+resolution so the system chooses the correct search path instead of forcing
+everything through category intent matching.
+
+### Query types
+
+`services/query_intent_router.py` emits:
+
+- `basket_optimization`
+- `direct_product_search`
+- `partial_product_search`
+- `brand_search`
+- `category_search`
+- `subjective_recommendation`
+- `ambiguous_request`
+- `not_covered_request`
+- `unsupported_request`
+- `unknown`
+
+Each route includes `confidence`, per-item routing metadata, reasons, warnings,
+and clarification flags.
+
+### Confidence-based handling
+
+High-confidence direct/partial product matches can be priced immediately.
+Medium-confidence direct candidates are returned for confirmation. Low-confidence
+or unknown routes can be logged to the review queue. High-risk short terms such
+as `糖`, `油`, `米`, `麵`, `面`, `紙巾`, `雞蛋`, and `蛋` do not enter fuzzy
+direct search.
+
+### Direct product search
+
+`services/product_direct_search.py` uses exact match, normalized exact match,
+partial containment, token coverage scoring, and conservative stdlib `difflib`
+fuzzy matching. Flavor tokens such as `麻油味` are weighted heavily, so
+`出前一丁麻油味` ranks `出前一丁麻油味即食麵(袋裝)` ahead of unrelated
+`出前一丁` flavors.
+
+### Brand search
+
+Brand-only queries such as `出前一丁` and `維他奶` return all currently
+catalogued matching brand products. The system does not guess a flavor or
+specification. If the goal is cheapest, the price planner compares the brand
+candidates and picks the lowest available priced product.
+
+User-facing copy says: `你沒有指定口味或規格。我先按目前公開資料中收錄的「品牌」商品比較價格。`
+
+### Subjective recommendation guardrail
+
+Queries such as `最好吃的麵`, `最健康的飲品`, or `推薦好用的洗頭水` are not
+answered with fabricated taste, health, or rating claims. The composer explains
+that the current source is public price data and offers supported alternatives:
+find cheapest, list catalogued products, or compare by brand/category.
+
+### Review queue
+
+`services/query_review_queue.py` can build and append JSONL records for cases
+that need product/routing review: unknown query type, low confidence, ambiguous /
+unsupported / not-covered statuses, multiple direct candidates, fuzzy candidates
+below high confidence, or user clarification answers.
+
+CLI opt-in:
+
+```powershell
+python scripts\run_shopping_agent.py --query "出前一丁麻油味" --db-path data\app_state\project2_dev.sqlite3 --point-code p001 --include-price-plan --log-query-review --query-review-path data\logs\query_review_queue.jsonl --debug-json
+```
+
+Environment opt-in: `PROJECT2_QUERY_REVIEW_QUEUE=1`.
+
+### Why LLM helps routing but does not price or decide products
+
+The router is rule-first and deterministic by default. `query_router_mode=llm`
+is reserved as a future extension, but the LLM must not invent products, prices,
+stock, taste rankings, or health claims. Product matching remains auditable
+catalog search; price decisions remain SQL-backed deterministic planning.

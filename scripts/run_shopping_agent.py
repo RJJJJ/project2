@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -35,8 +36,11 @@ def main() -> int:
     parser.add_argument("--local-llm-endpoint", default=None)
     parser.add_argument("--retrieval-mode", default="taxonomy", choices=["taxonomy", "rag_assisted"])
     parser.add_argument("--composer-mode", default="template", choices=["template", "gemini"])
+    parser.add_argument("--query-router-mode", default="hybrid", choices=["off", "rule", "hybrid", "llm"])
     parser.add_argument("--log-observation", action="store_true")
     parser.add_argument("--observation-log-path", default="data/logs/agent_observations.jsonl")
+    parser.add_argument("--log-query-review", action="store_true")
+    parser.add_argument("--query-review-path", default="data/logs/query_review_queue.jsonl")
     args = parser.parse_args()
 
     decision_policy_options = {
@@ -60,6 +64,9 @@ def main() -> int:
         composer_mode=args.composer_mode,
         decision_policy=args.decision_policy,
         decision_policy_options=decision_policy_options,
+        query_router_mode=args.query_router_mode,
+        enable_query_review_queue=args.log_query_review or os.getenv("PROJECT2_QUERY_REVIEW_QUEUE") == "1",
+        query_review_path=args.query_review_path,
     )
     ended_at = time.time()
     if args.log_observation:
