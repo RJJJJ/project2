@@ -12,8 +12,8 @@ from services.query_intent_router import QUERY_TYPES
 
 CONFIDENCES = {"high", "medium", "low"}
 GOALS = {"cheapest", "list_options", "specific_price", "subjective", "unknown"}
-HARD_NOT_COVERED = {"雞蛋", "薯條", "M&M", "m&m"}
-HIGH_RISK_SHORT = {"糖", "油", "米", "麵", "面", "紙巾", "朱古力", "飲品"}
+HARD_NOT_COVERED = {"??", "??", "M&M", "m&m"}
+HIGH_RISK_SHORT = {"?", "?", "?", "?", "?", "??", "??", "?"}
 ROUTER_SCHEMA_KEYS = {
     "query",
     "query_type",
@@ -25,6 +25,7 @@ ROUTER_SCHEMA_KEYS = {
     "reasons",
     "warnings",
 }
+DEFAULT_LLM_ROUTER_TIMEOUT_SECONDS = 8
 
 
 def _base_diagnostics(provider: str, model: str | None) -> dict[str, Any]:
@@ -58,14 +59,14 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 def build_llm_router_prompt(query: str, planner_output: dict | None = None) -> str:
     examples = [
-        ("出前一丁", "brand_search", "出前一丁", "unknown"),
-        ("出前一丁麻油味", "partial_product_search", "出前一丁", "unknown"),
-        ("麥老大雞蛋幼面", "direct_product_search", None, "unknown"),
-        ("雞蛋", "not_covered_request", None, "unknown"),
-        ("最好吃的麵", "subjective_recommendation", None, "subjective"),
-        ("我想買砂糖同洗頭水", "basket_optimization", None, "unknown"),
-        ("糖", "ambiguous_request", None, "unknown"),
-        ("BB用嘅濕紙巾", "category_search", None, "unknown"),
+        ("????", "brand_search", "????", "unknown"),
+        ("???????", "partial_product_search", "????", "unknown"),
+        ("??????", "direct_product_search", None, "unknown"),
+        ("??", "not_covered_request", None, "unknown"),
+        ("?????", "subjective_recommendation", None, "subjective"),
+        ("?????????", "basket_optimization", None, "unknown"),
+        ("?", "ambiguous_request", None, "unknown"),
+        ("BB?????", "category_search", None, "unknown"),
     ]
     few_shots = "\n".join(
         json.dumps(
@@ -80,7 +81,7 @@ def build_llm_router_prompt(query: str, planner_output: dict | None = None) -> s
                         "unit": None,
                         "query_type": qt,
                         "brand": brand,
-                        "category_hint": "wet_wipe" if "濕紙巾" in q else None,
+                        "category_hint": "wet_wipe" if "???" in q else None,
                         "product_clues": [],
                         "goal": goal,
                         "confidence": "high",
@@ -105,10 +106,10 @@ def build_llm_router_prompt(query: str, planner_output: dict | None = None) -> s
         "Allowed query_type: basket_optimization, direct_product_search, partial_product_search, brand_search, category_search, subjective_recommendation, ambiguous_request, not_covered_request, unsupported_request, unknown.\n"
         "Allowed confidence: high, medium, low. Allowed goal: cheapest, list_options, specific_price, subjective, unknown.\n"
         "Rules: do not calculate prices; do not output product_oid; do not claim database availability; do not decide final product match; preserve raw user item words.\n"
-        "Subjective queries such as 最好吃/最健康/最受歡迎 => subjective_recommendation or unsupported_request.\n"
-        "Brand only such as 出前一丁 => brand_search. Brand + flavor such as 出前一丁麻油味 => partial_product_search.\n"
-        "Exact-looking product names such as 麥老大雞蛋幼面 => direct_product_search.\n"
-        "Short ambiguous terms 糖/油/麵/面/紙巾 => ambiguous_request. Known not-covered fresh items 雞蛋 => not_covered_request.\n"
+        "Subjective queries such as ??/?? => subjective_recommendation or unsupported_request.\n"
+        "Brand only such as ???? => brand_search. Brand + flavor such as ??????? => partial_product_search.\n"
+        "Exact-looking product names such as ?????? => direct_product_search.\n"
+        "Short ambiguous terms ?/?/?/?/?? => ambiguous_request. Known not-covered fresh items ?? => not_covered_request.\n"
         "If uncertain, use confidence low and query_type unknown or ambiguous_request.\n"
         "Few-shot outputs:\n"
         f"{few_shots}\n"
@@ -167,7 +168,7 @@ def route_query_with_llm(
     model: str | None = None,
     api_key: str | None = None,
     endpoint: str | None = None,
-    timeout_seconds: int = 20,
+    timeout_seconds: int = DEFAULT_LLM_ROUTER_TIMEOUT_SECONDS,
 ) -> tuple[dict, dict]:
     selected_provider = provider if provider in {"gemini", "local_llm"} else "gemini"
     selected_model = model or (os.getenv("PROJECT2_GEMINI_MODEL") if selected_provider == "gemini" else os.getenv("PROJECT2_LOCAL_LLM_MODEL"))
@@ -248,13 +249,15 @@ def merge_rule_and_llm_router_outputs(rule_result: dict, llm_result: dict | None
     llm_conf = str(llm_result.get("confidence") or "low")
     raw_terms = [str(item.get("raw") or query) for item in (result.get("items") or [{"raw": query}])]
 
+    if rule_type == "unsupported_request" and str(result.get("confidence") or "") == "high":
+        return _append_merge_diagnostics(result, "rule_kept", strategy)
     if rule_type == "not_covered_request" and any(_norm(term) in {_norm(v) for v in HARD_NOT_COVERED} for term in raw_terms):
         return _append_merge_diagnostics(result, "rule_kept", strategy)
     if rule_type == "ambiguous_request":
         for term in raw_terms:
             if _norm(term) in {_norm(v) for v in HIGH_RISK_SHORT} and not _query_has_extra_clues(query, term):
                 return _append_merge_diagnostics(result, "rule_kept", strategy)
-    if llm_type in {"subjective_recommendation", "unsupported_request"} and not (rule_type == "direct_product_search" and "價" in query):
+    if llm_type in {"subjective_recommendation", "unsupported_request"} and not (rule_type == "direct_product_search" and "?" in query):
         escalated = dict(llm_result)
         escalated["reasons"] = list(dict.fromkeys([*(result.get("reasons") or []), *(llm_result.get("reasons") or []), "llm escalated subjective/unsupported request"]))
         return _append_merge_diagnostics(escalated, "llm_accepted", strategy)

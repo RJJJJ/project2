@@ -19,8 +19,13 @@ const queryType = computed(() => routerDecision.value.query_type || '')
 const bestPlan = computed(() => props.result?.price_plan?.decision_result?.best_recommendation || props.result?.price_plan?.best_plan || null)
 const alternatives = computed(() => (props.result?.price_plan?.decision_result?.alternatives || []).filter((plan) => plan && plan !== bestPlan.value).slice(0, 3))
 const ambiguousItems = computed(() => props.result?.ambiguous_items || [])
+const unknownItems = computed(() => props.result?.unknown_items || [])
 const notCoveredItems = computed(() => props.result?.not_covered_items || [])
 const unsupportedItems = computed(() => props.result?.unsupported_items || [])
+const resultStatus = computed(() => props.result?.status || '')
+const pricePlanStatus = computed(() => props.result?.price_plan?.status || '')
+const requiresClarification = computed(() => resultStatus.value === 'needs_clarification' || pricePlanStatus.value === 'needs_clarification')
+const hasUnpricedItems = computed(() => requiresClarification.value || resultStatus.value === 'partial' || ambiguousItems.value.length > 0 || unknownItems.value.length > 0 || notCoveredItems.value.length > 0 || unsupportedItems.value.length > 0)
 const candidateSummary = computed(() => props.result?.candidate_summary || [])
 const firstRagFeatures = computed(() => {
   for (const summary of candidateSummary.value) {
@@ -66,6 +71,12 @@ function isSelected(rawItemName, intentId) {
 function selectOption(rawItemName, option) {
   emit('select-clarification', { rawItemName, option })
 }
+function itemMessage(item, fallback) {
+  return item?.message_zh || fallback
+}
+function clarificationOptionLabels(item) {
+  return clarificationOptions(item).map((option) => option.label_zh || option.intent_id).filter(Boolean)
+}
 function routerNoticeText() {
   if (queryType.value === 'brand_search') return '系統把這次查詢判斷為品牌搜尋，會先整理該品牌下較相關的候選商品。'
   if (queryType.value === 'direct_product_search') return '系統已辨識為明確商品查詢，會優先直接比對最相關商品。'
@@ -106,6 +117,55 @@ function routerNoticeText() {
           {{ routerNoticeText() }}
         </section>
 
+        <section v-if="hasUnpricedItems" :class="isSenior ? 'rounded-[2rem] border-4 border-amber-300 bg-amber-50 p-6 shadow-2xl' : 'rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm'">
+          <h3 :class="isSenior ? 'text-3xl font-black text-amber-950' : 'text-lg font-bold text-amber-950'">部分項目未納入完整計價</h3>
+          <p :class="isSenior ? 'mt-3 text-lg font-bold leading-8 text-amber-900' : 'mt-2 text-sm leading-6 text-amber-900'">以下價格只包含已成功識別並可計價的商品；需要確認、未收錄或未能識別的項目未納入總價。</p>
+
+          <div :class="isSenior ? 'mt-6 space-y-5' : 'mt-4 space-y-4'">
+            <section v-if="ambiguousItems.length">
+              <h4 :class="isSenior ? 'text-2xl font-black text-amber-950' : 'text-sm font-bold text-amber-950'">需要確認</h4>
+              <div :class="isSenior ? 'mt-3 grid gap-3' : 'mt-2 grid gap-2'">
+                <article v-for="item in ambiguousItems" :key="`warning-ambiguous-${item.raw_item_name}`" :class="isSenior ? 'rounded-3xl bg-white p-4 shadow-lg' : 'rounded-xl bg-white p-3'">
+                  <p :class="isSenior ? 'text-xl font-black text-slate-900' : 'font-semibold text-[#44413A]'">{{ item.raw_item_name }}</p>
+                  <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-700' : 'mt-1 text-sm text-[#5F5A4D]'">{{ itemMessage(item, '需要進一步確認商品類型後先可計價') }}</p>
+                  <p v-if="clarificationOptionLabels(item).length" :class="isSenior ? 'mt-2 text-base font-bold text-amber-900' : 'mt-2 text-xs font-semibold text-amber-900'">可選：{{ clarificationOptionLabels(item).join('、') }}</p>
+                </article>
+              </div>
+            </section>
+
+            <section v-if="unknownItems.length">
+              <h4 :class="isSenior ? 'text-2xl font-black text-amber-950' : 'text-sm font-bold text-amber-950'">暫時未能識別</h4>
+              <div :class="isSenior ? 'mt-3 grid gap-3' : 'mt-2 grid gap-2'">
+                <article v-for="item in unknownItems" :key="`warning-unknown-${item.raw_item_name}`" :class="isSenior ? 'rounded-3xl bg-white p-4 shadow-lg' : 'rounded-xl bg-white p-3'">
+                  <p :class="isSenior ? 'text-xl font-black text-slate-900' : 'font-semibold text-[#44413A]'">{{ item.raw_item_name }}</p>
+                  <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-700' : 'mt-1 text-sm text-[#5F5A4D]'">{{ itemMessage(item, '系統暫時未能識別此商品') }}</p>
+                  <p v-if="item.risky" :class="isSenior ? 'mt-2 text-base font-bold text-amber-900' : 'mt-2 text-xs font-semibold text-amber-900'">建議改用更具體商品名或品牌</p>
+                </article>
+              </div>
+            </section>
+
+            <section v-if="notCoveredItems.length">
+              <h4 :class="isSenior ? 'text-2xl font-black text-amber-950' : 'text-sm font-bold text-amber-950'">暫未收錄</h4>
+              <div :class="isSenior ? 'mt-3 grid gap-3' : 'mt-2 grid gap-2'">
+                <article v-for="item in notCoveredItems" :key="`warning-not-covered-${item.raw_item_name}`" :class="isSenior ? 'rounded-3xl bg-white p-4 shadow-lg' : 'rounded-xl bg-white p-3'">
+                  <p :class="isSenior ? 'text-xl font-black text-slate-900' : 'font-semibold text-[#44413A]'">{{ item.raw_item_name }}</p>
+                  <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-700' : 'mt-1 text-sm text-[#5F5A4D]'">{{ itemMessage(item, '公開監測資料暫未收錄此商品') }}</p>
+                </article>
+              </div>
+            </section>
+
+            <section v-if="unsupportedItems.length">
+              <h4 :class="isSenior ? 'text-2xl font-black text-amber-950' : 'text-sm font-bold text-amber-950'">不支援的查詢</h4>
+              <div :class="isSenior ? 'mt-3 grid gap-3' : 'mt-2 grid gap-2'">
+                <article v-for="item in unsupportedItems" :key="`warning-unsupported-${item.raw_item_name}`" :class="isSenior ? 'rounded-3xl bg-white p-4 shadow-lg' : 'rounded-xl bg-white p-3'">
+                  <p :class="isSenior ? 'text-xl font-black text-slate-900' : 'font-semibold text-[#44413A]'">{{ item.raw_item_name }}</p>
+                  <p :class="isSenior ? 'mt-2 text-lg font-bold text-slate-700' : 'mt-1 text-sm text-[#5F5A4D]'">{{ itemMessage(item, '此查詢暫時不支援自動計價') }}</p>
+                </article>
+              </div>
+            </section>
+          </div>
+        </section>
+
         <details v-if="showDebugPanel && !isSenior" class="rounded-2xl border border-[#E4E1D8] bg-white p-4 text-sm shadow-sm">
           <summary class="cursor-pointer font-semibold text-[#8A826F]">Debug：Router / RAG / Composer</summary>
           <div class="mt-3 grid gap-2 text-[#5F5A4D] sm:grid-cols-3">
@@ -124,8 +184,12 @@ function routerNoticeText() {
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A826F]">Recommended Plan</p>
               <h3 class="mt-1 text-lg font-bold text-[#44413A]">推薦方案：{{ recommendedStoreText }}</h3>
+              <p v-if="hasUnpricedItems" class="mt-1 text-sm font-semibold text-amber-900">{{ requiresClarification ? '暫時計價：只包含已確認商品' : '暫時計價' }}</p>
             </div>
-            <p class="text-2xl font-bold tabular-nums text-[#C4B997]">{{ formatMoney(bestPlan.estimated_total_mop) }}</p>
+            <div class="text-right">
+              <p class="text-2xl font-bold tabular-nums text-[#C4B997]">{{ hasUnpricedItems ? `暫時計價 ${formatMoney(bestPlan.estimated_total_mop)}` : formatMoney(bestPlan.estimated_total_mop) }}</p>
+              <p v-if="requiresClarification" class="mt-1 text-xs font-semibold text-amber-900">Partial estimate</p>
+            </div>
           </div>
           <table class="min-w-full divide-y divide-[#E4E1D8] text-left text-sm">
             <thead class="bg-[#FBFBFA] text-xs font-semibold uppercase tracking-wide text-[#8A826F]">
@@ -146,9 +210,10 @@ function routerNoticeText() {
           <div class="absolute right-0 top-0 rounded-bl-3xl bg-[#00875A] px-6 py-3 text-lg font-black text-white">最佳方案</div>
           <p class="pr-28 text-xl font-black text-slate-500">推薦採購地點</p>
           <h3 class="mt-3 text-4xl font-black leading-tight text-[#00875A] sm:text-5xl">{{ recommendedStoreText }}</h3>
+          <p v-if="hasUnpricedItems" class="mt-3 text-lg font-black text-amber-900 sm:text-xl">{{ requiresClarification ? '暫時計價：只包含已確認商品' : '暫時計價' }}</p>
           <div class="my-6 grid grid-cols-1 gap-4 rounded-3xl border-4 border-slate-100 bg-slate-50 p-5 sm:grid-cols-2">
             <div class="rounded-2xl bg-white p-5 text-center shadow-lg">
-              <p class="text-lg font-black text-slate-500">估計總價</p>
+              <p class="text-lg font-black text-slate-500">{{ hasUnpricedItems ? '暫時計價' : '估計總價' }}</p>
               <p class="mt-2 text-4xl font-black tabular-nums text-[#FF6B00] sm:text-5xl">{{ formatMoney(bestPlan.estimated_total_mop) }}</p>
             </div>
             <div class="rounded-2xl bg-[#FF6B00] p-5 text-center text-white shadow-lg">
@@ -180,9 +245,9 @@ function routerNoticeText() {
           </div>
         </section>
 
-        <section v-if="!bestPlan && (unsupportedItems.length || result.status === 'unsupported')" :class="isSenior ? 'rounded-[2rem] border-4 border-yellow-300 bg-yellow-50 p-6 shadow-xl' : 'rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm'">
-          <h3 :class="isSenior ? 'text-2xl font-black text-yellow-900' : 'text-base font-bold text-yellow-900'">目前未能直接回答</h3>
-          <p :class="isSenior ? 'mt-2 text-lg font-bold text-yellow-900' : 'mt-2 text-sm leading-6 text-yellow-900'">{{ result.user_message_zh }}</p>
+        <section v-if="result.status === 'unsupported' || queryType === 'unsupported_request' || (!bestPlan && unsupportedItems.length)" :class="isSenior ? 'rounded-[2rem] border-4 border-yellow-300 bg-yellow-50 p-6 shadow-xl' : 'rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm'">
+          <h3 :class="isSenior ? 'text-2xl font-black text-yellow-900' : 'text-base font-bold text-yellow-900'">暫時未能分析購物需求</h3>
+          <p :class="isSenior ? 'mt-2 text-lg font-bold text-yellow-900' : 'mt-2 text-sm leading-6 text-yellow-900'">{{ result.user_message_zh || '請輸入購物清單、品牌或商品名稱，例如：砂糖同洗頭水、出前一丁麻油味、BB用濕紙巾。' }}</p>
         </section>
 
         <section v-if="ambiguousItems.length" :class="isSenior ? 'rounded-[2rem] border-4 border-yellow-400 bg-yellow-50 p-6 shadow-2xl' : 'rounded-2xl border border-[#D4C9A8] bg-[#F2F1EC] p-5 shadow-sm'">
@@ -200,12 +265,6 @@ function routerNoticeText() {
           <button type="button" :class="isSenior ? 'mt-5 h-20 w-full rounded-2xl bg-yellow-600 text-2xl font-black text-white shadow-lg' : 'mt-5 h-11 w-full rounded-xl bg-[#C4B997] text-sm font-black text-white'" :disabled="!canRecalculate" @click="emit('recalculate')">依據選擇重新查價</button>
         </section>
 
-        <section v-if="notCoveredItems.length" :class="isSenior ? 'rounded-[2rem] border-4 border-slate-100 bg-white p-6 shadow-xl' : 'rounded-2xl border border-[#E4E1D8] bg-white p-5 shadow-sm'">
-          <h3 :class="isSenior ? 'text-2xl font-black text-slate-900' : 'text-base font-bold text-[#44413A]'">資料暫未收錄</h3>
-          <div :class="isSenior ? 'mt-4 grid gap-3' : 'mt-3 flex flex-wrap gap-2'">
-            <div v-for="item in notCoveredItems" :key="`not-covered-${item.raw_item_name}`" :class="isSenior ? 'rounded-2xl bg-slate-50 p-4 text-xl font-black text-slate-700' : 'rounded-full bg-[#F2F1EC] px-3 py-1 text-sm font-semibold text-[#6E685A]'">{{ item.raw_item_name }}</div>
-          </div>
-        </section>
       </div>
     </template>
   </div>

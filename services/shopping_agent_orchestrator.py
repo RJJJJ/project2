@@ -32,6 +32,45 @@ def _clarification_options(intent_options: list[str]) -> list[dict[str, str]]:
     return [{"intent_id": intent_id, "label_zh": str(PRODUCT_INTENTS.get(intent_id, {}).get("display_name_zh") or intent_id)} for intent_id in intent_options]
 
 
+def _build_unsupported_response(query: str, query_type: str, price_strategy: str, decision_policy: str | None, diagnostics: dict[str, Any], router_decision: dict[str, Any]) -> dict[str, Any]:
+    helpful_message = "我可以幫你比較澳門超市公開監測商品價格。請輸入購物清單、品牌或商品名稱，例如「砂糖同洗頭水」、「出前一丁麻油味」或「BB用濕紙巾」。"
+    result = {
+        "query": query,
+        "status": "unsupported",
+        "query_type": query_type,
+        "resolved_items": [],
+        "ambiguous_items": [],
+        "not_covered_items": [],
+        "unsupported_items": [
+            {
+                "raw_item_name": query,
+                "message_zh": "我可以幫你比較澳門超市公開監測商品價格。請輸入購物清單、品牌或商品名稱。",
+            }
+        ],
+        "unknown_items": [],
+        "candidate_summary": [],
+        "warnings": [],
+        "diagnostics": diagnostics,
+        "query_router": router_decision,
+        "price_plan": {
+            "status": "not_priceable",
+            "strategy": price_strategy,
+            "priceable_items": [],
+            "store_plans": [],
+            "best_plan": None,
+            "decision_result": {
+                "status": "not_priceable",
+                "policy": decision_policy or price_strategy,
+                "best_recommendation": None,
+                "alternatives": [],
+                "decision_explanation_zh": "這次查詢不是可計價的購物需求。",
+            },
+        },
+        "user_message_zh": helpful_message,
+    }
+    return result
+
+
 def _status(resolved_items: list[dict[str, Any]], ambiguous_items: list[dict[str, Any]], not_covered_items: list[dict[str, Any]], unknown_items: list[dict[str, Any]], price_plan: dict[str, Any] | None = None, unsupported_items: list[dict[str, Any]] | None = None) -> str:
     if unsupported_items:
         return "unsupported"
@@ -52,6 +91,8 @@ def _status(resolved_items: list[dict[str, Any]], ambiguous_items: list[dict[str
     if resolved_items and not ambiguous_items and not not_covered_items and not unknown_items:
         return "ok"
     if unknown_items:
+        if not resolved_items and not ambiguous_items and not not_covered_items and (not price_plan or price_plan.get("status") == "not_priceable"):
+            return "unsupported"
         return "needs_clarification"
     return "error"
 
@@ -182,7 +223,13 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             "router_merge_strategy": "guarded",
             "router_merge_decision": "disabled",
         }
-        if llm_router_enabled:
+        should_skip_llm_router = router_decision.get("query_type") == "unsupported_request" and router_decision.get("confidence") == "high"
+        if llm_router_enabled and should_skip_llm_router:
+            llm_router_diagnostics.update({"llm_router_used": "skipped", "router_merge_strategy": "guarded", "router_merge_decision": "rule_kept"})
+            router_decision.setdefault("diagnostics", {}).update({k: v for k, v in llm_router_diagnostics.items() if k.startswith("llm_router_")})
+            router_decision["diagnostics"]["router_merge_strategy"] = "guarded"
+            router_decision["diagnostics"]["router_merge_decision"] = "rule_kept"
+        elif llm_router_enabled:
             llm_result, llm_router_diagnostics = route_query_with_llm(
                 query,
                 planner_output=planner_output,
@@ -190,7 +237,7 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 model=llm_router_model,
                 api_key=(llm_router_options or {}).get("api_key"),
                 endpoint=(llm_router_options or {}).get("endpoint"),
-                timeout_seconds=int((llm_router_options or {}).get("timeout_seconds") or 20),
+                timeout_seconds=int((llm_router_options or {}).get("timeout_seconds") or 8),
             )
             router_decision = merge_rule_and_llm_router_outputs(router_decision, llm_result, strategy="guarded")
             router_decision.setdefault("diagnostics", {}).update({k: v for k, v in llm_router_diagnostics.items() if k.startswith("llm_router_")})
@@ -203,6 +250,47 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
                 parsed_items = [{"keyword": router_raw, "raw_text": router_raw, "quantity": router_decision["items"][0].get("quantity", 1), "unit": router_decision["items"][0].get("unit")}]
         router_items_by_raw = {str(item.get("raw") or ""): item for item in router_decision.get("items") or []}
         normalized_answers = _normalized_clarification_answers(clarification_answers)
+
+        base_diagnostics = {
+            "products_loaded": len(products),
+            "items_parsed": len(parsed_items),
+            "resolved_count": 0,
+            "ambiguous_count": 0,
+            "not_covered_count": 0,
+            "unknown_count": 0,
+            "unsupported_count": 1,
+            "llm_planner_enabled": bool(use_llm),
+            "debug": bool(debug),
+            "clarification_answers_count": len(normalized_answers),
+            "planner_mode": planner_mode if planner_mode in {"rule", "local_llm"} else "rule",
+            "planner_used": planner_used,
+            "planner_errors": planner_errors,
+            "retrieval_mode": retrieval_mode if retrieval_mode in {"taxonomy", "rag_assisted", "rag_v2"} else "taxonomy",
+            "rag_used": False,
+            "rag_candidate_counts": {},
+            "composer_mode": composer_mode if composer_mode in {"template", "gemini"} else "template",
+            "decision_policy": decision_policy or price_strategy,
+            "query_router_mode": normalized_router_mode,
+            "query_type": router_decision.get("query_type"),
+            "query_confidence": router_decision.get("confidence"),
+            "llm_router_enabled": bool(llm_router_enabled),
+            **{k: v for k, v in llm_router_diagnostics.items() if k != "llm_router_raw_output" or debug},
+            **(router_decision.get("diagnostics") or {}),
+            "price_plan_status": "not_priceable",
+        }
+        if router_decision.get("query_type") == "unsupported_request":
+            early_result = _build_unsupported_response(query, "unsupported_request", price_strategy, decision_policy, base_diagnostics, router_decision)
+            composer_mode_used = composer_mode if composer_mode in {"template", "gemini"} else "template"
+            early_result["diagnostics"]["composer_mode"] = composer_mode_used
+            user_message_zh, composer_diagnostics = compose_agent_response(early_result, composer_mode=composer_mode_used)
+            early_result["user_message_zh"] = user_message_zh
+            early_result["composer_diagnostics"] = composer_diagnostics
+            early_result["diagnostics"]["composer_used"] = composer_diagnostics.get("composer_used")
+            early_result["diagnostics"]["composer_errors"] = composer_diagnostics.get("composer_errors") or []
+            if enable_query_review_queue:
+                from services.query_review_queue import append_query_review_record, build_query_review_record
+                append_query_review_record(build_query_review_record(early_result), query_review_path)
+            return early_result
 
         resolved_items: list[dict[str, Any]] = []
         ambiguous_items: list[dict[str, Any]] = []
@@ -402,6 +490,8 @@ def run_shopping_agent(query: str, db_path: str | Path, point_code: str | None =
             result["status"] = _status(resolved_items, ambiguous_items, not_covered_items, unknown_items, price_plan, unsupported_items=unsupported_items)
             result["diagnostics"]["price_plan_status"] = price_plan.get("status")
 
+        if result["status"] == "unsupported" and router_decision.get("query_type") == "unknown" and not resolved_items and not ambiguous_items and not not_covered_items and unknown_items:
+            result["user_message_zh"] = "我可以幫你比較澳門超市公開監測商品價格。請輸入購物清單、品牌或商品名稱，例如「砂糖同洗頭水」、「出前一丁麻油味」或「BB用濕紙巾」。"
         user_message_zh, composer_diagnostics = compose_agent_response(result, composer_mode=normalized_composer_mode)
         result["user_message_zh"] = user_message_zh
         result["composer_diagnostics"] = composer_diagnostics
